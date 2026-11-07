@@ -143,19 +143,48 @@ def _fts_query(query: str) -> str:
     return " OR ".join(dict.fromkeys(tokens[:18]))
 
 
-def search_sources(query: str, db_path: Path | str, top_k: int = 8, jurisdiction_hint: str | None = None) -> list[dict]:
+def search_sources(
+    query: str,
+    db_path: Path | str,
+    top_k: int = 8,
+    jurisdiction_hint: str | None = None,
+    national_only: bool = False,
+) -> list[dict]:
+    """Search legal passages with optional state or national jurisdiction isolation.
+
+    A state-scoped search includes central/national and matching-state records.
+    A national-only search excludes state-specific records until location is confirmed.
+    The unrestricted default is retained for the manual source explorer.
+    """
     if not Path(db_path).exists(): return []
     match = _fts_query(query)
     if not match: return []
     conn = connect(db_path)
     try:
+        select_sql = """SELECT doc_id,title,section_number,text,jurisdiction,source_url,source_publisher,year,status,source_type,legal_subject,bm25(legal_fts, 0.0, 2.0, 4.0, 1.0) AS rank
+                FROM legal_fts WHERE legal_fts MATCH ?"""
+        limit = max(1, min(20, top_k))
         if jurisdiction_hint:
-            rows = conn.execute("""SELECT doc_id,title,section_number,text,jurisdiction,source_url,source_publisher,year,status,source_type,legal_subject,bm25(legal_fts, 0.0, 2.0, 4.0, 1.0) AS rank
-                FROM legal_fts WHERE legal_fts MATCH ? AND (lower(jurisdiction)='central' OR lower(jurisdiction)='india' OR lower(jurisdiction) LIKE ? OR source_type IN ('constitution','regulation'))
-                ORDER BY rank LIMIT ?""", (match, "%" + jurisdiction_hint.casefold() + "%", max(1,min(20,top_k)))).fetchall()
+            rows = conn.execute(
+                select_sql + """ AND (
+                    lower(trim(jurisdiction)) IN ('central', 'india')
+                    OR lower(jurisdiction) LIKE ?
+                ) ORDER BY rank LIMIT ?""",
+                (match, "%" + jurisdiction_hint.casefold() + "%", limit),
+            ).fetchall()
+        elif national_only:
+            rows = conn.execute(
+                select_sql + """ AND (
+                    lower(trim(jurisdiction)) IN ('central', 'india')
+                    OR source_type = 'constitution'
+                ) ORDER BY rank LIMIT ?""",
+                (match, limit),
+            ).fetchall()
         else:
-            rows = conn.execute("""SELECT doc_id,title,section_number,text,jurisdiction,source_url,source_publisher,year,status,source_type,legal_subject,bm25(legal_fts, 0.0, 2.0, 4.0, 1.0) AS rank
-                FROM legal_fts WHERE legal_fts MATCH ? ORDER BY rank LIMIT ?""", (match, max(1,min(20,top_k)))).fetchall()
+            rows = conn.execute(
+                select_sql + " ORDER BY rank LIMIT ?",
+                (match, limit),
+            ).fetchall()
         results=[]
         for row in rows:
             (doc_id,title,section,body,jurisdiction,url,publisher,year,status,source_type,subject,rank)=row

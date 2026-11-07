@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 import streamlit as st
-from src.config import DATABASE_PATH, LLM_API_KEY, OPEN_INDIA_LAW_DIR, CONSTITUTION_DIR
+from src.config import DATABASE_PATH, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, OPEN_INDIA_LAW_DIR, CONSTITUTION_DIR
 from src.database import database_stats, search_sources
 from src.dataset_manager import setup_all
 from src.service import analyze_problem, analyze_without_llm
@@ -35,11 +35,13 @@ with st.sidebar:
     st.caption("Default download includes central/state legislation, regulator material and Constitution. Court judgments are optional and very large.")
     st.divider()
     st.subheader("AI connection")
+    provider_host = LLM_BASE_URL.split("://")[-1].split("/")[0]
     if LLM_API_KEY:
-        st.success("Groq API key detected")
+        st.success(f"LLM API key detected · {provider_host}")
+        st.caption(f"Configured model: {LLM_MODEL}")
     else:
-        st.warning("Groq key not configured. Database search works; AI-generated analysis is disabled.")
-        st.caption("Add LLM_API_KEY to .env when you obtain your key, then restart Streamlit.")
+        st.warning("LLM API key not configured. Database search works; AI-generated analysis is disabled.")
+        st.caption("Add LLM_API_KEY to .env, then restart Streamlit.")
     st.divider()
     st.warning("For immediate danger, arrest/custody, police or court notices, deadlines, or high-stakes disputes, contact a qualified local advocate promptly.")
 

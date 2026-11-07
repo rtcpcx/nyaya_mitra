@@ -1,6 +1,6 @@
 # Nyaya Mitra — General-purpose Indian Legal Information Assistant
 
-A Windows-friendly prototype with a real Groq LLM integration (API key required only for AI analysis), a nationwide legal corpus downloader, a local SQLite full-text search index, constitutional text retrieval, cautious issue-spotting, and raw output capture.
+A Windows-friendly prototype with a real OpenAI-compatible LLM integration (Groq, Gemini-compatible endpoints and other providers) (API key required only for AI analysis), a nationwide legal corpus downloader, a local SQLite full-text search index, constitutional text retrieval, cautious issue-spotting, and raw output capture.
 
 > **Not a lawyer / not legal advice.** This prototype does not determine legal rights, authenticate evidence, guarantee outcomes, or replace an advocate. The legal database is a point-in-time third-party compilation. Verify important provisions against the linked official source and current Gazette/notifications before relying on them.
 
@@ -20,7 +20,7 @@ A Windows-friendly prototype with a real Groq LLM integration (API key required 
 - Python 3.11 (recommended)
 - Internet for initial dataset downloads
 - Hugging Face account/token with read access to `vaquill/open-india-law`
-- Groq API key for actual AI analysis (you said you have not obtained it yet; that is okay)
+- API key for your chosen OpenAI-compatible LLM provider for actual AI analysis
 - Disk space: legislation + regulator files are much smaller than judgments, but allow several GB for downloaded files and the SQLite index. Actual size varies with dataset snapshot.
 
 ## 2. Install (PowerShell)
@@ -101,7 +101,7 @@ nyaya_mitra/
 └── logs/
 ```
 
-## 5. Add Groq API key later
+## 5. Configure an LLM provider
 
 You can finish the database setup before you have a Groq key. When you obtain it:
 
@@ -161,9 +161,9 @@ pytest -q
 python -m src.dataset_manager status
 ```
 
-The included offline test suite currently passes **11 tests** in the build environment. It uses synthetic local fixtures for the Parquet ingestion path; it does not prove that a live Hugging Face download or live Groq completion will succeed on your machine. Those need to be checked during your first setup and after you add the API key.
+The offline regression suite uses synthetic local fixtures and is also run by the GitHub Actions workflow on branch pushes and pull requests. Passing tests do not prove that a live Hugging Face download, live LLM completion, current legal validity or legal completeness will succeed; those require separate checks.
 
-To test the Groq connection after setting the key:
+To test the configured LLM provider after setting the key:
 
 ```powershell
 python -m src.llm --test
