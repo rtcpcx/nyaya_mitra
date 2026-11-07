@@ -1,0 +1,7 @@
+streamlit>=1.41,<2
+openai>=1.55,<3
+python-dotenv>=1.0,<2
+pydantic>=2.8,<3
+huggingface_hub>=0.34,<2
+pyarrow>=18,<25
+pytest>=8,<10
