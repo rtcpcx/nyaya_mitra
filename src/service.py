@@ -226,6 +226,7 @@ def respond_to_turn(
             "next_question": "at most 2-3 focused questions that materially affect the next step; compare against every user statement and never repeat a question already answered; empty when enough is known or user asked a direct question that can be answered now",
             "case_summary": "cumulative factual ledger from all user statements; retain amount, payment method, location, parties, allegation/reason, dates, agreement terms, evidence, contact attempts, address, desired outcome and unresolved facts; label claims; do not silently drop earlier facts",
             "risk_level": "routine, prompt, or urgent",
+            "suggested_actions": "0-3 concise next-step buttons, each with label and a complete user prompt to send when clicked; draft buttons must explicitly request a named document; return [] if no useful action",
         },
     }
 
@@ -256,6 +257,7 @@ def respond_to_turn(
         "next_question": question,
         "case_summary": parsed.get("case_summary", ""),
         "draft": draft,
+        "suggested_actions": [item.model_dump() for item in parsed.get("suggested_actions", [])][:3],
         "risk_level": risk_level,
         "triage": triage,
         "retrieved_sources": sources,
@@ -292,6 +294,7 @@ def respond_without_llm(
         "next_question": "What happened most recently?",
         "case_summary": user_message[:500],
         "draft": "",
+        "suggested_actions": [],
         "risk_level": triage["level"],
         "triage": triage,
         "retrieved_sources": sources,
