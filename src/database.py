@@ -6,6 +6,45 @@ from typing import Any, Callable
 TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_./-]{1,}")
 OFFICIAL_CONSTITUTION_URL = "https://www.legislative.gov.in/documents"
 
+# Domain vocabulary is deliberately conservative: a document must contain a
+# domain-specific legal term, not merely a generic word such as "deposit".
+RENTAL_TERMS = {
+    "landlord", "tenant", "tenancy", "rent", "rental", "lease", "lessor",
+    "lessee", "eviction", "premises", "occupancy", "letting",
+}
+RENTAL_QUERY_EXPANSION = (
+    "landlord tenant tenancy rent rental lease lessor lessee eviction premises occupancy"
+)
+STOPWORDS = {
+    "the", "and", "for", "with", "from", "that", "this", "have", "what",
+    "when", "where", "does", "under", "about", "into", "your", "are",
+    "was", "were", "has", "had", "you", "my", "me", "can", "please",
+    "who", "why", "how", "not", "but", "then", "they", "them",
+}
+
+
+def _query_domain(query: str) -> str | None:
+    text = (query or "").casefold()
+    tokens = set(TOKEN_RE.findall(text))
+    if tokens & RENTAL_TERMS or "security deposit" in text:
+        return "rental"
+    return None
+
+
+def _is_relevant_result(query: str, row: dict, domain: str | None) -> bool:
+    source_text = " ".join(
+        str(row.get(key) or "") for key in ("title", "section", "text", "legal_subject")
+    ).casefold()
+    source_tokens = set(TOKEN_RE.findall(source_text))
+    query_tokens = set(TOKEN_RE.findall((query or "").casefold())) - STOPWORDS
+    overlap = source_tokens & query_tokens
+    if domain == "rental":
+        # RBI/TRAI passages about generic "security deposits" fail this gate.
+        # A tenancy-related source must contain a landlord/tenant/lease concept
+        # and share at least one meaningful term with the user's account.
+        return bool(source_tokens & RENTAL_TERMS) and bool(overlap)
+    return len(overlap) >= 2
+
 
 def connect(db_path: Path | str) -> sqlite3.Connection:
     path = Path(db_path)
@@ -149,6 +188,7 @@ def search_sources(
     top_k: int = 8,
     jurisdiction_hint: str | None = None,
     national_only: bool = False,
+    strict_relevance: bool = False,
 ) -> list[dict]:
     """Search legal passages with optional state or national jurisdiction isolation.
 
@@ -157,13 +197,17 @@ def search_sources(
     The unrestricted default is retained for the manual source explorer.
     """
     if not Path(db_path).exists(): return []
-    match = _fts_query(query)
+    domain = _query_domain(query) if strict_relevance else None
+    expanded_query = query
+    if domain == "rental":
+        expanded_query = f"{query} {RENTAL_QUERY_EXPANSION}"
+    match = _fts_query(expanded_query)
     if not match: return []
     conn = connect(db_path)
     try:
         select_sql = """SELECT doc_id,title,section_number,text,jurisdiction,source_url,source_publisher,year,status,source_type,legal_subject,bm25(legal_fts, 0.0, 2.0, 4.0, 1.0) AS rank
                 FROM legal_fts WHERE legal_fts MATCH ?"""
-        limit = max(1, min(20, top_k))
+        limit = max(1, min(50, max(top_k * 3, top_k) if strict_relevance else top_k))
         if jurisdiction_hint:
             rows = conn.execute(
                 select_sql + """ AND (
@@ -191,6 +235,11 @@ def search_sources(
             results.append({"doc_id":doc_id,"title":title,"section":section,"text":body[:9000],"jurisdiction":jurisdiction,
                             "source_url":url,"source_publisher":publisher,"year":year,"status":status,
                             "source_type":source_type,"legal_subject":subject,"retrieval_rank":round(float(rank),5)})
+        if strict_relevance:
+            results = [
+                item for item in results
+                if _is_relevant_result(query, item, domain)
+            ][:max(1, min(20, top_k))]
         return results
     finally: conn.close()
 
