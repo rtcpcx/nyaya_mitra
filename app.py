@@ -93,7 +93,7 @@ with st.sidebar:
         st.success(f"Connected configuration · {provider_host}")
         st.caption(f"Model: {LLM_MODEL}")
     else:
-        st.warning("No LLM API key configured. Local source search remains available; AI chat is disabled.")
+        st.warning("No LLM API key configured. Basic intake and local source lookup remain available; AI-generated replies are disabled.")
 
     st.warning("For immediate danger, arrest/custody, police or court notices, hearings, deadlines or major rights, contact emergency services or a qualified local advocate promptly.")
 
@@ -219,7 +219,7 @@ if prompt:
             )
         except Exception as exc:
             st.error(f"I couldn't complete this turn: {exc}")
-            st.caption("Your message remains in this session. You can retry without re-entering it.")
+            st.caption("Your message remains visible in this conversation. You can send it again after correcting the issue.")
 
 latest = st.session_state.get("last_result")
 if latest:
