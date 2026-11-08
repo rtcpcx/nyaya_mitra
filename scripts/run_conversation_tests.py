@@ -201,9 +201,5 @@ def main() -> int:
     return 1 if any(item["errors"] for item in summary) else 0
 
 
-if __run__ == "__main__":
-    raise SystemExit(main())
-
-
 if __name__ == "__main__":
     raise SystemExit(main())
