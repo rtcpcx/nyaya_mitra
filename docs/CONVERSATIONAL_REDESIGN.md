@@ -41,6 +41,7 @@ The redesign separates three jobs that were previously bundled together:
 - Added deterministic triage reconciliation so a model cannot downgrade a prompt/urgent rule flag.
 - Added per-turn retrieval, model-generation and total timings.
 - Kept raw model output, source records, triage and timings in the developer/test-bench expander and JSON downloads.
+- Preserved factual document drafting in chat only when the current user message explicitly requests a named document; unsolicited model drafts are discarded.
 
 ## Validation and limitations
 
