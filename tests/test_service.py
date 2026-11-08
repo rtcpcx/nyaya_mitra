@@ -45,6 +45,7 @@ def test_unknown_state_uses_national_only_retrieval(monkeypatch, tmp_path):
     service.analyze_problem("My landlord is withholding a deposit", "Somewhere in India")
     assert calls["national_only"] is True
     assert calls["jurisdiction_hint"] is None
+    assert calls["strict_relevance"] is True
 
 
 def test_explicit_draft_request_is_retained(monkeypatch, tmp_path):
