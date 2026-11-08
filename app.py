@@ -57,7 +57,7 @@ with st.sidebar:
     )
     st.selectbox(
         "Response language",
-        ["English", "Hindi", "Assamese", "Bengali", "Tamil", "Telugu", "Marathi", "Other"],
+        ["English", "Hindi", "Assamese", "Bengali", "Tamil", "Telugu", "Marathi", "Other (specify in your message)"],
         key="response_language",
     )
 
@@ -145,6 +145,9 @@ for message in st.session_state["messages"]:
         st.markdown(message["content"])
         metadata = message.get("metadata")
         if message["role"] == "assistant" and metadata:
+            if metadata.get("case_summary"):
+                with st.expander("What I understand so far"):
+                    st.write(metadata["case_summary"])
             if metadata.get("risk_level") in {"prompt", "urgent"}:
                 st.warning(
                     "Safety triage: this may need prompt legal attention. "
@@ -185,6 +188,9 @@ if prompt:
                 assistant_text += "\n\n" + result["next_question"]
             st.markdown(assistant_text)
 
+            if result.get("case_summary"):
+                with st.expander("What I understand so far"):
+                    st.write(result["case_summary"])
             if result.get("risk_level") in {"prompt", "urgent"}:
                 st.warning(
                     "This may need prompt legal attention. Do not rely on an AI response "
