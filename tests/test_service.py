@@ -62,7 +62,7 @@ def test_conversation_preserves_grouped_questions_and_never_downgrades_triage(mo
     monkeypatch.setattr(service, "search_sources", lambda *a, **k: [])
     monkeypatch.setattr(service, "generate_conversation_json", lambda payload: {
         "reply": "I understand that a court notice can be time-sensitive. Keep the complete notice and envelope.",
-        "next_question": "1. When did you receive it?\\n2. Which court issued it?",
+        "next_question": "1. When did you receive it?\n2. Which court issued it?",
         "case_summary": "The user says they received a court notice.",
         "risk_level": "routine",
     })
