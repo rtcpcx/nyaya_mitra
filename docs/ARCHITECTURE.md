@@ -1,28 +1,38 @@
 # Nyaya Mitra architecture v2
 
 ```text
-User story + location + language
+User chat turn + prior session conversation + location/language
             |
             v
 Deterministic keyword triage (transparent, limited)
             |
             v
-SQLite FTS5 search over local legal corpus
-   |                    |
-   |                    +--> Constitution articles/schedules/Preamble
-   +--> Central/state/UT legislation and regulator provisions
+SQLite FTS5 retrieval + jurisdiction isolation
             |
             v
-Retrieved passages + provenance + status metadata
+Conservative topic relevance gate
+  - tenancy vocabulary expansion
+  - reject generic deposit matches without tenancy context
             |
             v
-Groq OpenAI-compatible chat completion (key required)
+Compact relevant passages + provenance + triage
             |
             v
-Pydantic response validation + raw JSON storage
+Short conversational JSON response
+            |
+            v
+Pydantic validation + one-question normalisation
+            |
+            v
+Chat UI + per-turn timings + raw developer/test output
 ```
 
 ## Design choices
+
+1. **Conversation-first interface:** the primary flow is a Streamlit chat, not a one-shot intake form. Session State holds the conversation for the active browser session; it is not durable storage. Each model turn receives recent context and asks at most one follow-up question. The legacy structured-analysis service remains available for evaluation and compatibility.
+2. **Separate user and developer outputs:** ordinary users see a concise reply, one follow-up question, relevant sources and safety warnings. Raw model JSON, triage and latency diagnostics are exposed in a developer/test-bench expander and downloadable per-turn artifacts.
+3. **Measured latency:** the conversation service records retrieval, model-generation and total elapsed milliseconds independently. This makes the slow stage observable; no speed improvement is claimed without measurements from the user's live provider and local database.
+4. **Relevance-gated retrieval:** the conversation path uses an opt-in strict relevance filter. Tenancy queries add common tenancy synonyms to FTS5 recall, then require tenancy-specific vocabulary in the source and meaningful overlap with the user's query. Generic references to deposits in telecom or banking documents are not accepted as tenancy evidence. Manual source exploration keeps its broad search behaviour.
 
 1. **Nationwide data model:** the database indexes all available central/state/UT legislation and regulator Parquet files. The user's state/city is an input to analysis, not a hard-coded Assam default.
 2. **Separate Constitution source type:** Constitution passages are searchable but retain a distinct source type and explicit third-party transcription warning.
