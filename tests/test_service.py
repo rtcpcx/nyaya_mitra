@@ -122,3 +122,34 @@ def test_conversation_without_llm_is_transparent(monkeypatch, tmp_path):
     assert "AI-generated legal explanations are currently disabled" in result["reply"]
     assert result["next_question"].count("?") == 1
     assert result["timings_ms"]["generation"] == 0.0
+
+
+
+def test_conversation_suppresses_unsolicited_draft(monkeypatch, tmp_path):
+    monkeypatch.setattr(service, "DATABASE_PATH", tmp_path / "missing.sqlite3")
+    monkeypatch.setattr(service, "search_sources", lambda *a, **k: [])
+    monkeypatch.setattr(service, "generate_conversation_json", lambda payload: {
+        "reply": "I can help you understand the next step.",
+        "next_question": "Have you moved out?",
+        "case_summary": "The user reports a landlord deposit dispute.",
+        "risk_level": "routine",
+        "draft": "Dear landlord, you promised to return the deposit.",
+    })
+    result = service.respond_to_turn("My landlord is withholding my deposit.")
+    assert result["draft"] == ""
+
+
+def test_conversation_keeps_explicitly_requested_factual_draft(monkeypatch, tmp_path):
+    monkeypatch.setattr(service, "DATABASE_PATH", tmp_path / "missing.sqlite3")
+    monkeypatch.setattr(service, "search_sources", lambda *a, **k: [])
+    monkeypatch.setattr(service, "generate_conversation_json", lambda payload: {
+        "reply": "I can prepare a factual starting point.",
+        "next_question": "",
+        "case_summary": "The user says the landlord is withholding a deposit.",
+        "risk_level": "routine",
+        "draft": "Please return the security deposit of the amount stated by the tenant.",
+    })
+    result = service.respond_to_turn(
+        "Please draft a factual letter asking my landlord to return my security deposit."
+    )
+    assert result["draft"].startswith("Please return the security deposit")
