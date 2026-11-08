@@ -132,6 +132,8 @@ def respond_to_turn(
         for item in (history or [])
         if item.get("role") in {"user", "assistant"} and item.get("content")
     ][-10:]
+    if turns and turns[-1]["role"] == "user" and turns[-1]["content"].strip() == user_message.strip():
+        turns = turns[:-1]
     user_context = " ".join(
         item["content"] for item in turns if item["role"] == "user"
     )
