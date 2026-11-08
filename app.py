@@ -23,6 +23,47 @@ st.set_page_config(
     layout="wide",
 )
 
+def ensure_hosted_database():
+    """Download the prebuilt SQLite index from private Hugging Face storage once."""
+    if DATABASE_PATH.is_file():
+        return
+
+    repo_id = str(st.secrets.get("HF_DATABASE_REPO_ID", "")).strip()
+    if not repo_id:
+        return
+
+    token = str(st.secrets.get("HF_TOKEN", "")).strip() or None
+    DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    from huggingface_hub import hf_hub_download
+
+    with st.spinner("Connecting to the hosted Indian legal database (first startup may take a few minutes)..."):
+        downloaded_path = hf_hub_download(
+            repo_id=repo_id,
+            filename="nyaya_mitra.sqlite3",
+            repo_type="dataset",
+            token=token,
+            local_dir=str(DATABASE_PATH.parent),
+        )
+
+    # hf_hub_download with local_dir places the file at this path. Keep an
+    # explicit check so a misconfigured repository cannot look like success.
+    if not DATABASE_PATH.is_file() or DATABASE_PATH.stat().st_size == 0:
+        raise RuntimeError(
+            f"Database download completed but the expected file was not found: {downloaded_path}"
+        )
+
+
+try:
+    ensure_hosted_database()
+except Exception as exc:
+    st.error(
+        "The hosted legal database could not be downloaded. "
+        "Check HF_DATABASE_REPO_ID and HF_TOKEN in Streamlit → Settings → Secrets. "
+        f"Details: {exc}"
+    )
+
+
 st.markdown(
     """
     <style>
