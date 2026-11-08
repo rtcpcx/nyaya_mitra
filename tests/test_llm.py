@@ -61,3 +61,11 @@ def test_chat_timeout_has_actionable_provider_diagnostic(monkeypatch):
 
     with pytest.raises(RuntimeError, match=r"request timed out.*timeout is 45s"):
         llm.generate_conversation_json({"user_message": "test"})
+
+
+def test_conversation_prompt_answers_concerns_and_prevents_repeat_intake():
+    assert "Answer the user's actual question first" in llm.CHAT_SYSTEM_PROMPT
+    assert "Never ask for facts already supplied" in llm.CHAT_SYSTEM_PROMPT
+    assert "Never give absolute guarantees" in llm.CHAT_SYSTEM_PROMPT
+    assert "Do not say an agreement has been breached" in llm.CHAT_SYSTEM_PROMPT
+    assert "previous_case_summary" in llm.CHAT_SYSTEM_PROMPT
