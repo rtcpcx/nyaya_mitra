@@ -180,7 +180,7 @@ def test_conversation_remembers_older_user_facts_and_uses_chat_location(monkeypa
 
     def fake_search(query, *args, **kwargs):
         captured["query"] = query
-        captured["state_hint"] = args[3]
+        captured["state_hint"] = args[2]
         captured["national_only"] = kwargs.get("national_only")
         return []
 
