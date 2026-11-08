@@ -257,7 +257,7 @@ def respond_to_turn(
         "next_question": question,
         "case_summary": parsed.get("case_summary", ""),
         "draft": draft,
-        "suggested_actions": [item.model_dump() for item in parsed.get("suggested_actions", [])][:3],
+        "suggested_actions": parsed.get("suggested_actions", [])[:3],
         "risk_level": risk_level,
         "triage": triage,
         "retrieved_sources": sources,
