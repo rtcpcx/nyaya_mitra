@@ -237,3 +237,15 @@ def test_conversation_returns_structured_suggested_actions(monkeypatch, tmp_path
     result = service.respond_to_turn("My landlord has not returned my deposit.")
     assert result["suggested_actions"][0]["label"] == "Draft a demand letter"
     assert "Please draft" in result["suggested_actions"][0]["prompt"]
+
+
+def test_triage_does_not_escalate_a_notice_mentioned_as_an_option():
+    from src.triage import triage_text
+
+    sent_or_considered = triage_text("I am thinking about sending a legal notice to my landlord.")
+    received_with_deadline = triage_text("I received a legal notice with a deadline to reply.")
+
+    assert sent_or_considered["level"] == "routine"
+    assert sent_or_considered["lawyer_recommended"] is False
+    assert received_with_deadline["level"] == "prompt"
+    assert received_with_deadline["lawyer_recommended"] is True
