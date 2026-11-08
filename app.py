@@ -86,6 +86,7 @@ with st.sidebar:
             st.error(f"Database setup failed: {exc}")
 
     st.caption("The local corpus is a research index. It may be incomplete or out of date; linked official text and Gazette notifications must be checked.")
+    st.caption("Chat history is session-only. Raw turn JSON is saved locally in raw_outputs/ and may contain sensitive case details.")
     st.divider()
     st.subheader("AI connection")
     provider_host = LLM_BASE_URL.split("://")[-1].split("/")[0]
