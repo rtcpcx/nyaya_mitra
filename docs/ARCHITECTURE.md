@@ -34,12 +34,12 @@ Chat UI + per-turn timings + raw developer/test output
 3. **Measured latency:** the conversation service records retrieval, model-generation and total elapsed milliseconds independently. This makes the slow stage observable; no speed improvement is claimed without measurements from the user's live provider and local database.
 4. **Relevance-gated retrieval:** the conversation path uses an opt-in strict relevance filter. Tenancy queries add common tenancy synonyms to FTS5 recall, then require tenancy-specific vocabulary in the source and meaningful overlap with the user's query. Generic references to deposits in telecom or banking documents are not accepted as tenancy evidence. Manual source exploration keeps its broad search behaviour.
 
-1. **Nationwide data model:** the database indexes all available central/state/UT legislation and regulator Parquet files. The user's state/city is an input to analysis, not a hard-coded Assam default.
-2. **Separate Constitution source type:** Constitution passages are searchable but retain a distinct source type and explicit third-party transcription warning.
-3. **SQLite FTS5 instead of embeddings for the MVP:** the earlier Chroma + sentence-transformers approach required downloading an embedding model and vectorizing a very large corpus. FTS5 provides a smaller, reproducible, local lexical baseline and exact title/section keyword search. Semantic retrieval and reranking remain future work.
-4. **No automatic judgment download:** the judgment corpus is large; user opt-in is required.
-5. **No Groq key required for ingestion/search:** setup and database search work independently. AI analysis activates after `LLM_API_KEY` is configured.
-6. **No unsupported legal claims:** source-specific details must be grounded in retrieved passages. Dataset status does not equal legal validation.
+5. **Nationwide data model:** the database indexes all available central/state/UT legislation and regulator Parquet files. The user's state/city is an input to analysis, not a hard-coded Assam default.
+6. **Separate Constitution source type:** Constitution passages are searchable but retain a distinct source type and explicit third-party transcription warning.
+7. **SQLite FTS5 instead of embeddings for the MVP:** the earlier Chroma + sentence-transformers approach required downloading an embedding model and vectorizing a very large corpus. FTS5 provides a smaller, reproducible, local lexical baseline and exact title/section keyword search. Semantic retrieval and reranking remain future work.
+8. **No automatic judgment download:** the judgment corpus is large; user opt-in is required.
+9. **No LLM key required for ingestion/search:** setup and database search work independently. AI analysis activates after `LLM_API_KEY` is configured.
+10. **No unsupported legal claims:** source-specific details must be grounded in retrieved passages. Dataset status does not equal legal validation.
 
 ## Data ingestion
 
@@ -47,7 +47,7 @@ Chat UI + per-turn timings + raw developer/test output
 
 ## Known engineering limitations
 
-- FTS5 is lexical, not semantic; query expansion, hybrid retrieval, reranking and citation entailment checks are not implemented.
+- FTS5 is lexical, not semantic. Tenancy synonym expansion is implemented for chat retrieval, but hybrid semantic retrieval, general-purpose reranking and citation-entailment checks are not implemented.
 - Rebuilding the full index is a long, single-process operation; no incremental update or resume checkpoint at the row level.
 - Judgment chunks are not reconstructed into complete judgments.
 - No authentication, encryption-at-rest, tenant isolation, audit-grade retention controls or production deployment safeguards.
