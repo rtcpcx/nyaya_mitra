@@ -67,7 +67,11 @@ def _is_relevant_result(query: str, row: dict, domain: str | None) -> bool:
         # RBI/TRAI passages about generic "security deposits" fail this gate.
         # A tenancy-related source must contain a landlord/tenant/lease concept
         # and share at least one meaningful term with the user's account.
-        return bool(source_tokens & RENTAL_TERMS) and bool(overlap)
+        # Require an actual shared landlord/tenant/rent/lease concept. A row
+        # about a telecom or banking "security deposit" must not pass merely
+        # because it shares the generic word "deposit" with the user's story.
+        rental_overlap = source_tokens & query_tokens & RENTAL_TERMS
+        return bool(rental_overlap)
     if not query_tokens:
         return False
     if len(query_tokens) == 1 and query_tokens.issubset(GENERIC_QUERY_TERMS):
