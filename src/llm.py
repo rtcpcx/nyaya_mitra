@@ -41,7 +41,8 @@ Return exactly one JSON object with these keys:
 - reply: a concise, natural response in the requested language, usually 1-3 short sentences. Acknowledge what the person said and give only the next useful piece of information.
 - next_question: at most ONE short, specific question. Ask only the single most useful missing fact. If no question is needed, use an empty string. Do not put questions in reply.
 - case_summary: a short factual summary using only facts the user actually stated. Mark unverified claims as claims. Never fill gaps.
-- risk_level: routine, prompt, or urgent.\n- draft: empty unless the current user message explicitly requests a named legal document; then provide a factual draft using only user-supplied facts and clear placeholders.
+- risk_level: routine, prompt, or urgent.
+- draft: empty unless the current user message explicitly requests a named legal document; then provide a factual draft using only user-supplied facts and clear placeholders.
 
 LEGAL SAFETY:
 1. Use retrieved passages as the only authority for specific statutes, sections, cases, legal tests, deadlines, limitation periods, procedures and fees. Never rely on model memory for legal specifics.
