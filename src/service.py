@@ -39,7 +39,13 @@ def _draft_was_explicitly_requested(problem: str, history: list[dict] | None = N
         return True
     if not DRAFT_ACCEPT_RE.search(message):
         return False
-    for item in reversed(history or []):
+    recent_history = list(history or [])
+    # The Streamlit caller includes the current user message in history.
+    # Remove it so the previous assistant's offer can be recognised.
+    if recent_history and recent_history[-1].get("role") == "user":
+        if str(recent_history[-1].get("content") or "").strip() == message.strip():
+            recent_history = recent_history[:-1]
+    for item in reversed(recent_history):
         if item.get("role") == "assistant":
             offered = str(item.get("content") or "")
             return bool(DRAFT_OFFER_RE.search(offered))
