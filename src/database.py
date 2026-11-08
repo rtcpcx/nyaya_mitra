@@ -26,7 +26,7 @@ STOPWORDS = {
 def _query_domain(query: str) -> str | None:
     text = (query or "").casefold()
     tokens = set(TOKEN_RE.findall(text))
-    if tokens & RENTAL_TERMS or "security deposit" in text:
+    if tokens & RENTAL_TERMS:
         return "rental"
     return None
 
