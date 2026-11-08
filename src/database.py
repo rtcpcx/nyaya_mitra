@@ -179,7 +179,7 @@ def _fts_query(query: str) -> str:
         clean = token.replace('"', "").strip()
         if clean and clean.casefold() not in {"the", "and", "for", "with", "from", "that", "this", "have", "what", "when", "where", "does", "under", "about", "into", "your", "are", "was", "were", "has", "had", "you", "my", "me", "can"}:
             tokens.append('"' + clean + '"')
-    return " OR ".join(dict.fromkeys(tokens[:18]))
+    return " OR ".join(dict.fromkeys(tokens[:36]))
 
 
 def search_sources(
