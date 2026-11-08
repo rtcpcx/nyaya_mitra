@@ -10,7 +10,7 @@ URGENT_TERMS = [
 PROMPT_TERMS = [
     "fir", "police notice", "summons", "court notice", "court date", "hearing",
     "charge sheet", "chargesheet", "arrest warrant", "bail", "limitation",
-    "deadline", "appeal deadline", "divorce", "child custody", "domestic violence",
+    "deadline", "appeal deadline", "received a legal notice", "legal notice received", "legal notice with deadline", "reply deadline", "divorce", "child custody", "domestic violence",
     "sexual harassment", "property title", "land dispute", "termination",
     "unpaid wages", "tax notice", "immigration", "eviction notice", "legal notice",
     "consumer forum", "bank freeze", "account frozen", "cheque bounce"
