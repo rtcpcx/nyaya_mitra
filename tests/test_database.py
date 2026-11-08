@@ -44,6 +44,15 @@ def test_build_and_search_nationwide_and_constitution(tmp_path: Path, monkeypatc
     assert any("Assam Tenancy" in x["title"] for x in relevant)
     assert not any("TRAI" in x["title"] or "RBI" in x["title"] for x in relevant)
 
+    banking = search_sources(
+        "bank loan security deposit collateral",
+        db,
+        10,
+        national_only=True,
+        strict_relevance=True,
+    )
+    assert any("RBI" in x["title"] for x in banking)
+
     # When location is unknown, national-only filtering plus topic relevance
     # must not let generic RBI/TRAI uses of "deposit" appear as tenancy law.
     unknown_location = search_sources(
