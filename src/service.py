@@ -161,22 +161,32 @@ def respond_to_turn(
     for item in reversed(history or []):
         metadata = item.get("metadata") if isinstance(item, dict) else None
         if item.get("role") == "assistant" and isinstance(metadata, dict) and metadata.get("case_summary"):
-            prior_summary = str(metadata["case_summary"])[:1200]
+            prior_summary = str(metadata["case_summary"])[:2200]
             break
     turns = [
-        {"role": item.get("role"), "content": str(item.get("content") or "")[:1200]}
+        {"role": item.get("role"), "content": str(item.get("content") or "")[:1600]}
         for item in (history or [])
         if item.get("role") in {"user", "assistant"} and item.get("content")
-    ][-12:]
+    ][-20:]
     if turns and turns[-1]["role"] == "user" and turns[-1]["content"].strip() == user_message.strip():
         turns = turns[:-1]
-    user_context = " ".join(
-        item["content"] for item in turns if item["role"] == "user"
-    )
-    retrieval_query = " ".join([user_context, user_message]).strip()
+    # Preserve the user's own statements separately from assistant prose.
+    # This helps prevent repeat questions and retains facts beyond the last few turns.
+    user_statements = [
+        str(item.get("content") or "").strip()[:1600]
+        for item in (history or [])
+        if isinstance(item, dict) and item.get("role") == "user" and item.get("content")
+    ]
+    if not user_statements or user_statements[-1] != user_message.strip():
+        user_statements.append(user_message.strip()[:1600])
+    user_statements = user_statements[-20:]
+    user_context = " ".join(user_statements)
+    retrieval_query = user_context[-9000:]
     case_text = (retrieval_query or user_message).strip()
     triage = triage_text(case_text)
-    state_hint = _state_hint(state_city)
+    # A location stated in the conversation counts even if the sidebar field is blank.
+    state_hint = _state_hint(state_city) or _state_hint(user_context)
+    resolved_location = state_city.strip() or (state_hint.title() if state_hint else "Not confirmed; do not assume a state.")
 
     retrieval_started = perf_counter()
     sources = search_sources(
@@ -193,7 +203,8 @@ def respond_to_turn(
         "user_message": user_message,
         "recent_conversation": turns,
         "previous_case_summary": prior_summary,
-        "location": state_city.strip() or "Not confirmed; do not assume a state.",
+        "location": resolved_location,
+        "user_statements_so_far": user_statements,
         "response_language": language,
         "relevant_legal_passages": [
             {
@@ -211,9 +222,9 @@ def respond_to_turn(
         ],
         "first_pass_safety_triage": triage,
         "output_contract": {
-            "reply": "empathetic and fact-specific; 2-5 sentences during intake and several useful paragraphs for a sufficiently supported assessment; no questions",
-            "next_question": "up to 4 relevant, organised questions not already answered; empty when intake is complete",
-            "case_summary": "cumulative facts stated by the user; include material dates, amounts, parties, evidence, goals and unknowns; label claims",
+            "reply": "empathetic, fact-specific and substantive. Answer the user's actual question first. During intake use 2-5 useful sentences; when enough facts exist provide a structured explanation in several paragraphs.",
+            "next_question": "at most 2-3 focused questions that materially affect the next step; compare against every user statement and never repeat a question already answered; empty when enough is known or user asked a direct question that can be answered now",
+            "case_summary": "cumulative factual ledger from all user statements; retain amount, payment method, location, parties, allegation/reason, dates, agreement terms, evidence, contact attempts, address, desired outcome and unresolved facts; label claims; do not silently drop earlier facts",
             "risk_level": "routine, prompt, or urgent",
         },
     }
