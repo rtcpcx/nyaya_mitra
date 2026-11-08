@@ -9,7 +9,7 @@
 5. **User/developer separation:** concise replies and relevant source links are user-facing; raw model JSON, triage and latency metrics are placed in a developer/test-bench expander and downloadable JSON.
 6. **Retrieval relevance:** chat retrieval expands common tenancy vocabulary and rejects generic deposit references unless the retrieved passage contains tenancy-specific language and overlaps meaningfully with the user's issue. Regression fixtures include irrelevant TRAI and RBI passages.
 7. **Latency diagnostics:** each conversational turn records retrieval, model-generation and total elapsed milliseconds. Compare repeated runs on the same machine, database and provider before claiming a speed improvement.
-8. **Provider-neutral operation:** the chat path uses the configured OpenAI-compatible provider, with a shorter timeout/retry budget than the legacy report path.
+8. **Provider-neutral operation:** the chat path uses the configured OpenAI-compatible provider, a 45-second default timeout, zero automatic retries by default, and a 650-token response cap. Timeout/retry settings can be overridden in the local `.env`; `python -m src.llm --test-chat` exercises the exact chat request and reports elapsed time.
 
 ## Run locally (PowerShell)
 
