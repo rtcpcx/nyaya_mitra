@@ -1,9 +1,10 @@
 from src.config import DATABASE_PATH, TOP_K
 from src.database import search_sources
-from src.llm import generate_json
-from src.schemas import AnalysisResponse
+from src.llm import generate_json, generate_conversation_json
+from src.schemas import AnalysisResponse, ConversationResponse
 from src.triage import triage_text
 import re
+from time import perf_counter
 
 DRAFT_REQUEST_RE = re.compile(
     r"\b(?:draft|write|prepare|compose)\b.{0,100}\b(?:legal notice|notice|complaint|reply|response|application|affidavit|letter|agreement|petition|representation)\b"
@@ -96,3 +97,158 @@ def analyze_without_llm(problem: str, state_city: str = "") -> dict:
     return {"triage":triage,"retrieved_sources":sources,"source_mode":"retrieved" if sources else "no_sources_retrieved",
             "notice":"AI analysis is not enabled until an LLM API key is configured. The source search and rule-based triage are available.",
             "database_note":"Retrieved records are research leads, not a legal conclusion. Verify official current text."}
+
+
+
+def _first_question(text: str) -> str:
+    """Keep at most one complete question from model output."""
+    if not text:
+        return ""
+    match = re.search(r"[^?]*\?", text, flags=re.DOTALL)
+    return match.group(0).strip() if match else ""
+
+
+def _remove_questions(text: str) -> str:
+    """Keep the conversational reply declarative; the follow-up lives separately."""
+    if not text:
+        return ""
+    parts = re.split(r"(?<=[.!?])\s+", text.strip())
+    return " ".join(part for part in parts if "?" not in part).strip()
+
+
+def respond_to_turn(
+    user_message: str,
+    history: list[dict] | None = None,
+    state_city: str = "",
+    language: str = "English",
+) -> dict:
+    """Handle one conversational turn and return compact user output plus diagnostics."""
+    if not user_message or not user_message.strip():
+        raise ValueError("Please enter a message.")
+
+    started = perf_counter()
+    turns = [
+        {"role": item.get("role"), "content": str(item.get("content") or "")[:1800]}
+        for item in (history or [])
+        if item.get("role") in {"user", "assistant"} and item.get("content")
+    ][-10:]
+    user_context = " ".join(
+        item["content"] for item in turns if item["role"] == "user"
+    )
+    retrieval_query = " ".join([user_context, user_message]).strip()
+    case_text = (retrieval_query or user_message).strip()
+    triage = triage_text(case_text)
+    state_hint = _state_hint(state_city)
+
+    retrieval_started = perf_counter()
+    sources = search_sources(
+        retrieval_query or user_message,
+        DATABASE_PATH,
+        min(max(TOP_K, 8), 20),
+        state_hint,
+        national_only=not bool(state_hint),
+        strict_relevance=True,
+    )
+    retrieval_ms = round((perf_counter() - retrieval_started) * 1000, 2)
+
+    payload = {
+        "user_message": user_message,
+        "recent_conversation": turns,
+        "location": state_city.strip() or "Not confirmed; do not assume a state.",
+        "response_language": language,
+        "relevant_legal_passages": [
+            {
+                "title": source.get("title"),
+                "section": source.get("section"),
+                "text": (source.get("text") or "")[:2800],
+                "jurisdiction": source.get("jurisdiction"),
+                "status": source.get("status"),
+                "year": source.get("year"),
+                "source_type": source.get("source_type"),
+                "source_url": source.get("source_url"),
+                "legal_subject": source.get("legal_subject"),
+            }
+            for source in sources[:4]
+        ],
+        "first_pass_safety_triage": triage,
+        "output_contract": {
+            "reply": "1-3 short natural sentences; no question mark",
+            "next_question": "zero or one specific question",
+            "case_summary": "only facts stated by the user; label unverified claims",
+            "risk_level": "routine, prompt, or urgent",
+        },
+    }
+
+    generation_started = perf_counter()
+    model_output = generate_conversation_json(payload)
+    generation_ms = round((perf_counter() - generation_started) * 1000, 2)
+    parsed = ConversationResponse.model_validate(model_output).model_dump()
+
+    question = _first_question(parsed.get("next_question", ""))
+    if not question:
+        question = _first_question(parsed.get("reply", ""))
+    reply = _remove_questions(parsed.get("reply", "")).strip()
+    if not reply:
+        reply = "I can help you work through this carefully."
+    if not sources:
+        caveat = "I couldn't verify a sufficiently relevant legal provision in the local index, so I won't guess at the specific law."
+        if caveat.casefold() not in reply.casefold():
+            reply = f"{reply} {caveat}"
+
+    rank = {"routine": 0, "prompt": 1, "urgent": 2}
+    risk_level = parsed.get("risk_level", "routine")
+    if rank.get(triage.get("level", "routine"), 0) > rank.get(risk_level, 0):
+        risk_level = triage["level"]
+
+    return {
+        "reply": reply,
+        "next_question": question,
+        "case_summary": parsed.get("case_summary", ""),
+        "risk_level": risk_level,
+        "triage": triage,
+        "retrieved_sources": sources,
+        "source_mode": "relevant_sources_retrieved" if sources else "no_relevant_sources",
+        "timings_ms": {
+            "retrieval": retrieval_ms,
+            "generation": generation_ms,
+            "total": round((perf_counter() - started) * 1000, 2),
+        },
+        "database_note": "Local retrieval is a research aid, not confirmation that a provision is current, commenced or applicable. Verify official text and relevant notifications.",
+        "model_output": model_output,
+    }
+
+
+def respond_without_llm(
+    user_message: str,
+    history: list[dict] | None = None,
+    state_city: str = "",
+) -> dict:
+    """Safe, transparent chat fallback when no model key is configured."""
+    if not user_message or not user_message.strip():
+        raise ValueError("Please enter a message.")
+    started = perf_counter()
+    triage = triage_text(user_message)
+    state_hint = _state_hint(state_city)
+    retrieval_started = perf_counter()
+    sources = search_sources(
+        user_message, DATABASE_PATH, min(max(TOP_K, 8), 20), state_hint,
+        national_only=not bool(state_hint), strict_relevance=True,
+    )
+    retrieval_ms = round((perf_counter() - retrieval_started) * 1000, 2)
+    return {
+        "reply": "I can help you organise the facts and identify what needs checking. AI-generated legal explanations are currently disabled because no LLM API key is configured.",
+        "next_question": "What happened most recently?",
+        "case_summary": user_message[:500],
+        "risk_level": triage["level"],
+        "triage": triage,
+        "retrieved_sources": sources,
+        "source_mode": "relevant_sources_retrieved" if sources else "no_relevant_sources",
+        "timings_ms": {
+            "retrieval": retrieval_ms,
+            "generation": 0.0,
+            "total": round((perf_counter() - started) * 1000, 2),
+        },
+        "database_note": "Local retrieval is a research aid, not confirmation that a provision is current, commenced or applicable.",
+        "notice": "Configure an LLM_API_KEY to enable conversational AI analysis.",
+        "model_output": None,
+    }
