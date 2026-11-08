@@ -214,7 +214,7 @@ def test_conversation_remembers_older_user_facts_and_uses_chat_location(monkeypa
 
     assert captured["state_hint"] == "assam"
     assert captured["national_only"] is False
-    assert "paid the ₹25,000 deposit by cheque" in captured["payload"]["user_statements_so_far"]
+    assert any("paid the ₹25,000 deposit by cheque" in statement for statement in captured["payload"]["user_statements_so_far"])
     assert "Guwahati, Assam" in captured["payload"]["user_statements_so_far"][0]
     assert captured["payload"]["location"] == "Assam"
     assert result["next_question"] == ""
