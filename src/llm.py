@@ -76,20 +76,18 @@ def generate_conversation_json(payload: dict) -> dict:
         timeout=LLM_CHAT_TIMEOUT_SECONDS,
         max_retries=LLM_CHAT_MAX_RETRIES,
     )
-    # Gemini 3.x uses dynamic thinking by default. Keep its reasoning effort
-    # low for conversational turns so the small output budget is not consumed
-    # by internal reasoning. This provider-specific field is not sent to others.
+    # Gemini 3.x defaults to medium thinking. The official OpenAI-compatible
+    # API exposes reasoning_effort directly; low reduces latency. Keep a
+    # sufficient combined token budget for reasoning plus the visible JSON.
     provider_options = {}
     if "generativelanguage.googleapis.com" in (LLM_BASE_URL or "").lower():
-        provider_options["extra_body"] = {
-            "google": {"thinking_config": {"thinking_level": "low"}}
-        }
+        provider_options["reasoning_effort"] = "low"
 
     try:
         response = client.chat.completions.create(
             model=LLM_MODEL,
             temperature=0.1,
-            max_tokens=650,
+            max_tokens=2048,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": CHAT_SYSTEM_PROMPT},
@@ -116,7 +114,16 @@ def generate_conversation_json(payload: dict) -> dict:
             "Check the provider response, model access and API quota."
         ) from exc
 
-    return _extract_json(response.choices[0].message.content or "")
+    choice = response.choices[0]
+    content = choice.message.content or ""
+    if not content.strip():
+        finish_reason = getattr(choice, "finish_reason", "unknown")
+        raise RuntimeError(
+            f"The AI provider returned no visible text for model {LLM_MODEL} "
+            f"(finish_reason={finish_reason}). The response token budget may have "
+            "been consumed by internal reasoning; retry with a larger output budget."
+        )
+    return _extract_json(content)
 
 def generate_json(payload: dict) -> dict:
     if not LLM_API_KEY:
