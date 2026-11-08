@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -87,7 +88,7 @@ with st.sidebar:
             st.error(f"Database setup failed: {exc}")
 
     st.caption("The local corpus is a research index. It may be incomplete or out of date; linked official text and Gazette notifications must be checked.")
-    st.caption("Chat history is session-only. Raw turn JSON is saved locally in raw_outputs/ and may contain sensitive case details.")
+    st.caption("Chat history is session-only. Raw turn files are disabled by default; downloadable exports remain available in the developer panel.")
     st.divider()
     st.subheader("AI connection")
     provider_host = LLM_BASE_URL.split("://")[-1].split("/")[0]
@@ -257,13 +258,16 @@ if prompt:
                 "result": result,
             }
 
-            output_dir = Path("raw_outputs")
-            output_dir.mkdir(exist_ok=True)
-            filename = datetime.now(timezone.utc).strftime("chat_turn_%Y%m%d_%H%M%S_%f_utc.json")
-            (output_dir / filename).write_text(
-                json.dumps(st.session_state["last_result"], ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+            # Do not persist potentially sensitive legal narratives on disk by default.
+            # Enable only for a controlled local test bench with SAVE_RAW_OUTPUTS=true.
+            if os.getenv("SAVE_RAW_OUTPUTS", "false").strip().casefold() == "true":
+                output_dir = Path("raw_outputs")
+                output_dir.mkdir(exist_ok=True)
+                filename = datetime.now(timezone.utc).strftime("chat_turn_%Y%m%d_%H%M%S_%f_utc.json")
+                (output_dir / filename).write_text(
+                    json.dumps(st.session_state["last_result"], ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
             render_suggested_actions(
                 result.get("suggested_actions", []),
                 key_prefix="latest",
