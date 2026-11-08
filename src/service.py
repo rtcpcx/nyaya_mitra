@@ -195,6 +195,7 @@ def respond_to_turn(
     model_output = generate_conversation_json(payload)
     generation_ms = round((perf_counter() - generation_started) * 1000, 2)
     parsed = ConversationResponse.model_validate(model_output).model_dump()
+    draft = parsed.get("draft", "") if _draft_was_explicitly_requested(user_message) else ""
 
     question = _first_question(parsed.get("next_question", ""))
     if not question:
@@ -216,6 +217,7 @@ def respond_to_turn(
         "reply": reply,
         "next_question": question,
         "case_summary": parsed.get("case_summary", ""),
+        "draft": draft,
         "risk_level": risk_level,
         "triage": triage,
         "retrieved_sources": sources,
@@ -251,6 +253,7 @@ def respond_without_llm(
         "reply": "I can help you organise the facts and identify what needs checking. AI-generated legal explanations are currently disabled because no LLM API key is configured.",
         "next_question": "What happened most recently?",
         "case_summary": user_message[:500],
+        "draft": "",
         "risk_level": triage["level"],
         "triage": triage,
         "retrieved_sources": sources,
