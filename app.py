@@ -41,6 +41,7 @@ st.session_state.setdefault("messages", [])
 st.session_state.setdefault("last_result", None)
 st.session_state.setdefault("case_location", "")
 st.session_state.setdefault("response_language", "English")
+st.session_state.setdefault("queued_prompt", "")
 
 with st.sidebar:
     st.subheader("Your conversation")
@@ -144,12 +145,36 @@ def render_sources(sources):
 def render_draft(draft):
     if draft:
         with st.expander("Requested draft · advocate review required"):
-            st.warning("This is a factual draft, not a verified legal notice. Have a qualified local advocate review it before sending or filing.")
+            st.warning("This is a factual starting draft, not a verified legal notice. Check every fact and have a qualified local advocate review it before sending or filing.")
             st.code(draft, language="text")
 
 
+def render_suggested_actions(actions, key_prefix):
+    """Render follow-up buttons that submit complete prompts to the assistant."""
+    valid_actions = [
+        action for action in (actions or [])
+        if isinstance(action, dict)
+        and str(action.get("label") or "").strip()
+        and str(action.get("prompt") or "").strip()
+    ][:3]
+    if not valid_actions:
+        return
+    st.markdown("**Quick next steps**")
+    columns = st.columns(len(valid_actions))
+    for index, action in enumerate(valid_actions):
+        with columns[index]:
+            if st.button(
+                str(action["label"])[:48],
+                key=f"{key_prefix}_quick_action_{index}",
+                use_container_width=True,
+                help="Send this request directly to NYAYA MITRA",
+            ):
+                st.session_state["queued_prompt"] = str(action["prompt"])[:1000]
+                st.rerun()
+
+
 # Replay the current session's conversation.
-for message in st.session_state["messages"]:
+for message_index, message in enumerate(st.session_state["messages"]):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         metadata = message.get("metadata")
@@ -164,8 +189,13 @@ for message in st.session_state["messages"]:
                 )
             render_sources(metadata.get("retrieved_sources", []))
             render_draft(metadata.get("draft", ""))
+            render_suggested_actions(
+                metadata.get("suggested_actions", []),
+                key_prefix=f"history_{message_index}",
+            )
 
-prompt = st.chat_input(
+queued_prompt = st.session_state.pop("queued_prompt", "")
+prompt = queued_prompt or st.chat_input(
     "Describe what happened, or answer the last question…",
     max_chars=12000,
 )
@@ -233,6 +263,10 @@ if prompt:
             (output_dir / filename).write_text(
                 json.dumps(st.session_state["last_result"], ensure_ascii=False, indent=2),
                 encoding="utf-8",
+            )
+            render_suggested_actions(
+                result.get("suggested_actions", []),
+                key_prefix="latest",
             )
         except Exception as exc:
             st.error(f"I couldn't complete this turn: {exc}")
