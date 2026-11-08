@@ -12,6 +12,8 @@ def _path_env(name: str, default: str) -> Path:
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1")
 LLM_API_KEY = os.getenv("LLM_API_KEY", "").strip()
 LLM_MODEL = os.getenv("LLM_MODEL", "openai/gpt-oss-120b").strip()
+LLM_CHAT_TIMEOUT_SECONDS = max(10, min(180, int(os.getenv("LLM_CHAT_TIMEOUT_SECONDS", "45"))))
+LLM_CHAT_MAX_RETRIES = max(0, min(2, int(os.getenv("LLM_CHAT_MAX_RETRIES", "0"))))
 OPEN_INDIA_LAW_DIR = _path_env("OPEN_INDIA_LAW_DIR", "./data/open_india_law")
 CONSTITUTION_DIR = _path_env("CONSTITUTION_DIR", "./data/constitution")
 DATABASE_PATH = _path_env("DATABASE_PATH", "./data/nyaya_mitra.sqlite3")
