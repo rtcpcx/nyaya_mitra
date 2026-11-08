@@ -32,8 +32,8 @@ class AnalysisResponse(BaseModel):
 
 
 class ConversationResponse(BaseModel):
-    reply: str = Field(min_length=1, max_length=2400)
-    next_question: str = Field(default="", max_length=400)
+    reply: str = Field(min_length=1, max_length=5000)
+    next_question: str = Field(default="", max_length=1200)
     case_summary: str = Field(default="", max_length=1200)
     risk_level: Literal["routine", "prompt", "urgent"] = "routine"
     draft: str = Field(default="", max_length=6000)
