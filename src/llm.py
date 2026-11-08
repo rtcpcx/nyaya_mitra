@@ -76,6 +76,15 @@ def generate_conversation_json(payload: dict) -> dict:
         timeout=LLM_CHAT_TIMEOUT_SECONDS,
         max_retries=LLM_CHAT_MAX_RETRIES,
     )
+    # Gemini 3.x uses dynamic thinking by default. Keep its reasoning effort
+    # low for conversational turns so the small output budget is not consumed
+    # by internal reasoning. This provider-specific field is not sent to others.
+    provider_options = {}
+    if "generativelanguage.googleapis.com" in (LLM_BASE_URL or "").lower():
+        provider_options["extra_body"] = {
+            "google": {"thinking_config": {"thinking_level": "low"}}
+        }
+
     try:
         response = client.chat.completions.create(
             model=LLM_MODEL,
@@ -86,6 +95,7 @@ def generate_conversation_json(payload: dict) -> dict:
                 {"role": "system", "content": CHAT_SYSTEM_PROMPT},
                 {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
             ],
+            **provider_options,
         )
     except APITimeoutError as exc:
         elapsed = round(time.perf_counter() - started, 1)
