@@ -29,6 +29,7 @@ def test_chat_request_uses_bounded_settings_and_token_budget(monkeypatch):
             return SimpleNamespace(choices=[SimpleNamespace(message=message)])
 
     monkeypatch.setattr(llm, "LLM_API_KEY", "test-key")
+    monkeypatch.setattr(llm, "LLM_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
     monkeypatch.setattr(llm, "LLM_CHAT_TIMEOUT_SECONDS", 37)
     monkeypatch.setattr(llm, "LLM_CHAT_MAX_RETRIES", 0)
     monkeypatch.setitem(sys.modules, "openai", _fake_openai_module(FakeOpenAI))
@@ -40,6 +41,9 @@ def test_chat_request_uses_bounded_settings_and_token_budget(monkeypatch):
     assert calls["client"]["max_retries"] == 0
     assert calls["request"]["max_tokens"] == 650
     assert calls["request"]["response_format"] == {"type": "json_object"}
+    assert calls["request"]["extra_body"] == {
+        "google": {"thinking_config": {"thinking_level": "low"}}
+    }
 
 
 def test_chat_timeout_has_actionable_provider_diagnostic(monkeypatch):
