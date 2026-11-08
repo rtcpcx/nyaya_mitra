@@ -107,14 +107,15 @@ with st.sidebar:
             except Exception as exc:
                 st.error(f"Search failed: {exc}")
         for item in st.session_state.get("manual_source_results", []):
-            with st.expander(f"{item['title']} · {item.get('section') or 'Provision'}"):
-                st.write(item["text"])
-                st.caption(
-                    f"{item['source_type']} · {item['jurisdiction']} · "
-                    f"status: {item['status'] or 'not supplied'} · year: {item['year'] or 'not supplied'}"
-                )
-                if item.get("source_url"):
-                    st.markdown(f"[Open source document]({item['source_url']})")
+            st.markdown(f"**{item['title']} · {item.get('section') or 'Provision'}**")
+            st.write(item["text"])
+            st.caption(
+                f"{item['source_type']} · {item['jurisdiction']} · "
+                f"status: {item['status'] or 'not supplied'} · year: {item['year'] or 'not supplied'}"
+            )
+            if item.get("source_url"):
+                st.markdown(f"[Open source document]({item['source_url']})")
+            st.divider()
 
 
 def render_sources(sources):
