@@ -107,7 +107,7 @@ def _first_question(text: str) -> str:
     match = re.search(r"[^?]*\?", text, flags=re.DOTALL)
     if match:
         return match.group(0).strip()
-    candidate = re.split(r"[\\n.!]", text.strip(), maxsplit=1)[0].strip()
+    candidate = re.split(r"[.!]", text.strip(), maxsplit=1)[0].strip()
     return candidate + "?" if candidate else ""
 
 
