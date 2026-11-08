@@ -15,6 +15,10 @@ RENTAL_TERMS = {
 RENTAL_QUERY_EXPANSION = (
     "landlord tenant tenancy rent rental lease lessor lessee eviction premises occupancy"
 )
+GENERIC_QUERY_TERMS = {
+    "deposit", "refund", "case", "law", "legal", "money", "issue",
+    "notice", "complaint", "problem", "dispute", "rights",
+}
 STOPWORDS = {
     "the", "and", "for", "with", "from", "that", "this", "have", "what",
     "when", "where", "does", "under", "about", "into", "your", "are",
@@ -43,7 +47,14 @@ def _is_relevant_result(query: str, row: dict, domain: str | None) -> bool:
         # A tenancy-related source must contain a landlord/tenant/lease concept
         # and share at least one meaningful term with the user's account.
         return bool(source_tokens & RENTAL_TERMS) and bool(overlap)
-    return len(overlap) >= 2
+    if not query_tokens:
+        return False
+    if len(query_tokens) == 1 and query_tokens.issubset(GENERIC_QUERY_TERMS):
+        return False
+    # Short, specific questions (for example "FIR") need only one shared term;
+    # longer narratives require two to reduce coincidental keyword matches.
+    threshold = 2 if len(query_tokens) >= 5 else 1
+    return len(overlap) >= threshold
 
 
 def connect(db_path: Path | str) -> sqlite3.Connection:
