@@ -62,7 +62,7 @@ def test_conversation_returns_one_question_and_never_downgrades_triage(monkeypat
     monkeypatch.setattr(service, "search_sources", lambda *a, **k: [])
     monkeypatch.setattr(service, "generate_conversation_json", lambda payload: {
         "reply": "I understand that a court notice can be time-sensitive. Keep the complete notice and envelope.",
-        "next_question": "When did you receive it? Which court issued it?",
+        "next_question": "1. When did you receive it?\\n2. Which court issued it?",
         "case_summary": "The user says they received a court notice.",
         "risk_level": "routine",
     })
@@ -71,8 +71,9 @@ def test_conversation_returns_one_question_and_never_downgrades_triage(monkeypat
 
     assert result["risk_level"] == "prompt"
     assert result["triage"]["level"] == "prompt"
-    assert result["next_question"].count("?") == 1
-    assert "couldn't verify a sufficiently relevant legal provision" in result["reply"]
+    assert "When did you receive it?" in result["next_question"]
+    assert "Which court issued it?" in result["next_question"]
+    assert "couldn't verify a sufficiently relevant legal provision" not in result["reply"]
     assert result["source_mode"] == "no_relevant_sources"
     assert set(result["timings_ms"]) == {"retrieval", "generation", "total"}
 
