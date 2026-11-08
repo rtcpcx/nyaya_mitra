@@ -24,10 +24,10 @@ def _state_hint(location: str) -> str | None:
 
 
 DRAFT_ACCEPT_RE = re.compile(
-    r"^\\s*(?:yes|yeah|yep|sure|please|go ahead|do it|draft it|prepare it|write it|that would be great|okay)\\b",
+    r"^\s*(?:yes|yeah|yep|sure|please|go ahead|do it|draft it|prepare it|write it|that would be great|okay)\b",
     re.IGNORECASE,
 )
-DRAFT_OFFER_RE = re.compile(r"\\b(?:draft|prepare|write|compose)\\b", re.IGNORECASE)
+DRAFT_OFFER_RE = re.compile(r"\b(?:draft|prepare|write|compose)\b", re.IGNORECASE)
 
 
 def _draft_was_explicitly_requested(problem: str, history: list[dict] | None = None) -> bool:
