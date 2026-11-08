@@ -23,8 +23,29 @@ def _state_hint(location: str) -> str | None:
     return None
 
 
-def _draft_was_explicitly_requested(problem: str) -> bool:
-    return bool(DRAFT_REQUEST_RE.search(problem or "")) and not bool(DRAFT_NEGATION_RE.search(problem or ""))
+DRAFT_ACCEPT_RE = re.compile(
+    r"^\\s*(?:yes|yeah|yep|sure|please|go ahead|do it|draft it|prepare it|write it|that would be great|okay)\\b",
+    re.IGNORECASE,
+)
+DRAFT_OFFER_RE = re.compile(r"\\b(?:draft|prepare|write|compose)\\b", re.IGNORECASE)
+
+
+def _draft_was_explicitly_requested(problem: str, history: list[dict] | None = None) -> bool:
+    """Accept an explicit request or a clear yes to the assistant's recent draft offer."""
+    message = problem or ""
+    if DRAFT_NEGATION_RE.search(message):
+        return False
+    if DRAFT_REQUEST_RE.search(message):
+        return True
+    if not DRAFT_ACCEPT_RE.search(message):
+        return False
+    for item in reversed(history or []):
+        if item.get("role") == "assistant":
+            offered = str(item.get("content") or "")
+            return bool(DRAFT_OFFER_RE.search(offered))
+        if item.get("role") == "user":
+            break
+    return False
 
 
 def _reconcile_lawyer_recommendation(validated: dict, triage: dict) -> None:
@@ -195,7 +216,7 @@ def respond_to_turn(
     model_output = generate_conversation_json(payload)
     generation_ms = round((perf_counter() - generation_started) * 1000, 2)
     parsed = ConversationResponse.model_validate(model_output).model_dump()
-    draft = parsed.get("draft", "") if _draft_was_explicitly_requested(user_message) else ""
+    draft = parsed.get("draft", "") if _draft_was_explicitly_requested(user_message, history) else ""
 
     # Preserve a small grouped set of intake questions; reducing this to the
     # first question discarded useful context-gathering prompts.
