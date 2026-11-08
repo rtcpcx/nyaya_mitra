@@ -47,7 +47,7 @@ def analyze_problem(problem: str, state_city: str = "", language: str = "English
     if not problem or not problem.strip(): raise ValueError("Please describe what happened.")
     triage=triage_text(problem)
     state_hint = _state_hint(state_city)
-    sources=search_sources(problem, DATABASE_PATH, TOP_K, state_hint, national_only=not bool(state_hint))
+    sources=search_sources(problem, DATABASE_PATH, TOP_K, state_hint, national_only=not bool(state_hint), strict_relevance=True)
     draft_requested = _draft_was_explicitly_requested(problem)
     payload={
         "task":"Structure the user's legal problem and provide cautious, plain-language legal information.",
@@ -93,7 +93,7 @@ def analyze_without_llm(problem: str, state_city: str = "") -> dict:
     if not problem or not problem.strip(): raise ValueError("Please describe what happened.")
     triage=triage_text(problem)
     state_hint = _state_hint(state_city)
-    sources=search_sources(problem,DATABASE_PATH,TOP_K,state_hint,national_only=not bool(state_hint))
+    sources=search_sources(problem,DATABASE_PATH,TOP_K,state_hint,national_only=not bool(state_hint),strict_relevance=True)
     return {"triage":triage,"retrieved_sources":sources,"source_mode":"retrieved" if sources else "no_sources_retrieved",
             "notice":"AI analysis is not enabled until an LLM API key is configured. The source search and rule-based triage are available.",
             "database_note":"Retrieved records are research leads, not a legal conclusion. Verify official current text."}
