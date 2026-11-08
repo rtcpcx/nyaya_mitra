@@ -134,13 +134,13 @@ def respond_to_turn(
     for item in reversed(history or []):
         metadata = item.get("metadata") if isinstance(item, dict) else None
         if item.get("role") == "assistant" and isinstance(metadata, dict) and metadata.get("case_summary"):
-            prior_summary = str(metadata["case_summary"])[:800]
+            prior_summary = str(metadata["case_summary"])[:500]
             break
     turns = [
-        {"role": item.get("role"), "content": str(item.get("content") or "")[:1200]}
+        {"role": item.get("role"), "content": str(item.get("content") or "")[:800]}
         for item in (history or [])
         if item.get("role") in {"user", "assistant"} and item.get("content")
-    ][-8:]
+    ][-6:]
     if turns and turns[-1]["role"] == "user" and turns[-1]["content"].strip() == user_message.strip():
         turns = turns[:-1]
     user_context = " ".join(
@@ -155,7 +155,7 @@ def respond_to_turn(
     sources = search_sources(
         retrieval_query or user_message,
         DATABASE_PATH,
-        min(max(TOP_K, 8), 20),
+        min(max(TOP_K, 6), 12),
         state_hint,
         national_only=not bool(state_hint),
         strict_relevance=True,
@@ -172,7 +172,7 @@ def respond_to_turn(
             {
                 "title": source.get("title"),
                 "section": source.get("section"),
-                "text": (source.get("text") or "")[:2800],
+                "text": (source.get("text") or "")[:1800],
                 "jurisdiction": source.get("jurisdiction"),
                 "status": source.get("status"),
                 "year": source.get("year"),
@@ -180,7 +180,7 @@ def respond_to_turn(
                 "source_url": source.get("source_url"),
                 "legal_subject": source.get("legal_subject"),
             }
-            for source in sources[:4]
+            for source in sources[:3]
         ],
         "first_pass_safety_triage": triage,
         "output_contract": {
