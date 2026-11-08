@@ -124,6 +124,22 @@ def generate_json(payload: dict) -> dict:
 
 if __name__ == "__main__":
     import sys
-    if "--test" in sys.argv:
+    if "--test-chat" in sys.argv:
+        started = time.perf_counter()
+        result = generate_conversation_json({
+            "user_message": "Reply briefly to confirm that the NYAYA MITRA chat connection works.",
+            "recent_conversation": [],
+            "location": "Not confirmed",
+            "response_language": "English",
+            "relevant_legal_passages": [],
+            "first_pass_safety_triage": {"level": "routine"},
+        })
+        print(json.dumps({
+            "ok": True,
+            "model": LLM_MODEL,
+            "elapsed_seconds": round(time.perf_counter() - started, 2),
+            "response": result,
+        }, indent=2, ensure_ascii=False))
+    elif "--test" in sys.argv:
         result=generate_json({"task":"Return JSON with ok true and message 'LLM connection works'.","schema":{"ok":"boolean","message":"string"}})
         print(json.dumps(result,indent=2))
