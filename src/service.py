@@ -105,7 +105,10 @@ def _first_question(text: str) -> str:
     if not text:
         return ""
     match = re.search(r"[^?]*\?", text, flags=re.DOTALL)
-    return match.group(0).strip() if match else ""
+    if match:
+        return match.group(0).strip()
+    candidate = re.split(r"[\\n.!]", text.strip(), maxsplit=1)[0].strip()
+    return candidate + "?" if candidate else ""
 
 
 def _remove_questions(text: str) -> str:
