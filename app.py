@@ -141,6 +141,13 @@ def render_sources(sources):
             st.divider()
 
 
+def render_draft(draft):
+    if draft:
+        with st.expander("Requested draft · advocate review required"):
+            st.warning("This is a factual draft, not a verified legal notice. Have a qualified local advocate review it before sending or filing.")
+            st.code(draft, language="text")
+
+
 # Replay the current session's conversation.
 for message in st.session_state["messages"]:
     with st.chat_message(message["role"]):
@@ -156,6 +163,7 @@ for message in st.session_state["messages"]:
                     "Please do not rely on an AI response for a deadline or formal process."
                 )
             render_sources(metadata.get("retrieved_sources", []))
+            render_draft(metadata.get("draft", ""))
 
 prompt = st.chat_input(
     "Describe what happened, or answer the last question…",
@@ -199,6 +207,7 @@ if prompt:
                     "for a deadline, police/court process or formal filing."
                 )
             render_sources(result.get("retrieved_sources", []))
+            render_draft(result.get("draft", ""))
 
             timings = result.get("timings_ms", {})
             st.caption(
