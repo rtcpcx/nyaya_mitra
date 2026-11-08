@@ -6,6 +6,77 @@ from typing import Any, Callable
 TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_./-]{1,}")
 OFFICIAL_CONSTITUTION_URL = "https://www.legislative.gov.in/documents"
 
+# Domain vocabulary is deliberately conservative: a document must contain a
+# domain-specific legal term, not merely a generic word such as "deposit".
+RENTAL_TERMS = {
+    "landlord", "tenant", "tenancy", "rent", "rental", "lease", "lessor",
+    "lessee", "eviction", "premises", "occupancy", "letting",
+}
+RENTAL_QUERY_EXPANSION = (
+    "landlord tenant tenancy rent rental lease lessor lessee eviction premises occupancy"
+)
+GENERIC_QUERY_TERMS = {
+    "deposit", "refund", "case", "law", "legal", "money", "issue",
+    "notice", "complaint", "problem", "dispute", "rights",
+}
+STOPWORDS = {
+    "the", "and", "for", "with", "from", "that", "this", "have", "what",
+    "when", "where", "does", "under", "about", "into", "your", "are",
+    "was", "were", "has", "had", "you", "my", "me", "can", "please",
+    "who", "why", "how", "not", "but", "then", "they", "them",
+}
+
+
+def _query_domain(query: str) -> str | None:
+    text = (query or "").casefold()
+    tokens = set(TOKEN_RE.findall(text))
+    if tokens & RENTAL_TERMS:
+        return "rental"
+    return None
+
+
+def _title_matches_state(title: str, jurisdiction_hint: str | None) -> bool:
+    """Reject acts named for a different state even when dataset metadata says 'central'."""
+    if not jurisdiction_hint:
+        return True
+    normalized_title = (title or "").casefold()
+    current = jurisdiction_hint.casefold().strip()
+    named_regions = set((
+        "andhra pradesh", "arunachal pradesh", "assam", "bihar", "chhattisgarh",
+        "goa", "gujarat", "haryana", "himachal pradesh", "jharkhand",
+        "karnataka", "kerala", "madhya pradesh", "maharashtra", "manipur",
+        "meghalaya", "mizoram", "nagaland", "odisha", "punjab", "rajasthan",
+        "sikkim", "tamil nadu", "telangana", "tripura", "uttar pradesh",
+        "uttarakhand", "west bengal", "delhi", "jammu and kashmir", "ladakh",
+        "puducherry", "chandigarh", "central provinces",
+    ))
+    for region in named_regions:
+        if region != current and re.search(r"(?<![a-z])" + re.escape(region) + r"(?![a-z])", normalized_title):
+            return False
+    return True
+
+
+def _is_relevant_result(query: str, row: dict, domain: str | None) -> bool:
+    source_text = " ".join(
+        str(row.get(key) or "") for key in ("title", "section", "text", "legal_subject")
+    ).casefold()
+    source_tokens = set(TOKEN_RE.findall(source_text))
+    query_tokens = set(TOKEN_RE.findall((query or "").casefold())) - STOPWORDS
+    overlap = source_tokens & query_tokens
+    if domain == "rental":
+        # RBI/TRAI passages about generic "security deposits" fail this gate.
+        # A tenancy-related source must contain a landlord/tenant/lease concept
+        # and share at least one meaningful term with the user's account.
+        return bool(source_tokens & RENTAL_TERMS) and bool(overlap)
+    if not query_tokens:
+        return False
+    if len(query_tokens) == 1 and query_tokens.issubset(GENERIC_QUERY_TERMS):
+        return False
+    # Short, specific questions (for example "FIR") need only one shared term;
+    # longer narratives require two to reduce coincidental keyword matches.
+    threshold = 2 if len(query_tokens) >= 5 else 1
+    return len(overlap) >= threshold
+
 
 def connect(db_path: Path | str) -> sqlite3.Connection:
     path = Path(db_path)
@@ -140,28 +211,68 @@ def _fts_query(query: str) -> str:
         clean = token.replace('"', "").strip()
         if clean and clean.casefold() not in {"the", "and", "for", "with", "from", "that", "this", "have", "what", "when", "where", "does", "under", "about", "into", "your", "are", "was", "were", "has", "had", "you", "my", "me", "can"}:
             tokens.append('"' + clean + '"')
-    return " OR ".join(dict.fromkeys(tokens[:18]))
+    return " OR ".join(dict.fromkeys(tokens[:36]))
 
 
-def search_sources(query: str, db_path: Path | str, top_k: int = 8, jurisdiction_hint: str | None = None) -> list[dict]:
+def search_sources(
+    query: str,
+    db_path: Path | str,
+    top_k: int = 8,
+    jurisdiction_hint: str | None = None,
+    national_only: bool = False,
+    strict_relevance: bool = False,
+) -> list[dict]:
+    """Search legal passages with optional state or national jurisdiction isolation.
+
+    A state-scoped search includes central/national and matching-state records.
+    A national-only search excludes state-specific records until location is confirmed.
+    The unrestricted default is retained for the manual source explorer.
+    """
     if not Path(db_path).exists(): return []
-    match = _fts_query(query)
+    domain = _query_domain(query) if strict_relevance else None
+    expanded_query = query
+    if domain == "rental":
+        expanded_query = f"{query} {RENTAL_QUERY_EXPANSION}"
+    match = _fts_query(expanded_query)
     if not match: return []
     conn = connect(db_path)
     try:
+        select_sql = """SELECT doc_id,title,section_number,text,jurisdiction,source_url,source_publisher,year,status,source_type,legal_subject,bm25(legal_fts, 0.0, 2.0, 4.0, 1.0) AS rank
+                FROM legal_fts WHERE legal_fts MATCH ?"""
+        limit = max(1, min(50, max(top_k * 3, top_k) if strict_relevance else top_k))
         if jurisdiction_hint:
-            rows = conn.execute("""SELECT doc_id,title,section_number,text,jurisdiction,source_url,source_publisher,year,status,source_type,legal_subject,bm25(legal_fts, 0.0, 2.0, 4.0, 1.0) AS rank
-                FROM legal_fts WHERE legal_fts MATCH ? AND (lower(jurisdiction)='central' OR lower(jurisdiction)='india' OR lower(jurisdiction) LIKE ? OR source_type IN ('constitution','regulation'))
-                ORDER BY rank LIMIT ?""", (match, "%" + jurisdiction_hint.casefold() + "%", max(1,min(20,top_k)))).fetchall()
+            rows = conn.execute(
+                select_sql + """ AND (
+                    lower(trim(jurisdiction)) IN ('central', 'india')
+                    OR lower(jurisdiction) LIKE ?
+                ) ORDER BY rank LIMIT ?""",
+                (match, "%" + jurisdiction_hint.casefold() + "%", limit),
+            ).fetchall()
+        elif national_only:
+            rows = conn.execute(
+                select_sql + """ AND (
+                    lower(trim(jurisdiction)) IN ('central', 'india')
+                    OR source_type = 'constitution'
+                ) ORDER BY rank LIMIT ?""",
+                (match, limit),
+            ).fetchall()
         else:
-            rows = conn.execute("""SELECT doc_id,title,section_number,text,jurisdiction,source_url,source_publisher,year,status,source_type,legal_subject,bm25(legal_fts, 0.0, 2.0, 4.0, 1.0) AS rank
-                FROM legal_fts WHERE legal_fts MATCH ? ORDER BY rank LIMIT ?""", (match, max(1,min(20,top_k)))).fetchall()
+            rows = conn.execute(
+                select_sql + " ORDER BY rank LIMIT ?",
+                (match, limit),
+            ).fetchall()
         results=[]
         for row in rows:
             (doc_id,title,section,body,jurisdiction,url,publisher,year,status,source_type,subject,rank)=row
             results.append({"doc_id":doc_id,"title":title,"section":section,"text":body[:9000],"jurisdiction":jurisdiction,
                             "source_url":url,"source_publisher":publisher,"year":year,"status":status,
                             "source_type":source_type,"legal_subject":subject,"retrieval_rank":round(float(rank),5)})
+        if strict_relevance:
+            results = [
+                item for item in results
+                if _title_matches_state(item.get("title", ""), jurisdiction_hint)
+                and _is_relevant_result(query, item, domain)
+            ][:max(1, min(20, top_k))]
         return results
     finally: conn.close()
 

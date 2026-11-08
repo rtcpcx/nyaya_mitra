@@ -29,3 +29,11 @@ class AnalysisResponse(BaseModel):
     lawyer_recommendation: LawyerRecommendation = Field(default_factory=LawyerRecommendation)
     source_notes: list[str] = Field(default_factory=list)
     draft: str = ""
+
+
+class ConversationResponse(BaseModel):
+    reply: str = Field(min_length=1, max_length=5000)
+    next_question: str = Field(default="", max_length=1200)
+    case_summary: str = Field(default="", max_length=2200)
+    risk_level: Literal["routine", "prompt", "urgent"] = "routine"
+    draft: str = Field(default="", max_length=6000)
