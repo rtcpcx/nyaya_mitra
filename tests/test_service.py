@@ -57,7 +57,7 @@ def test_explicit_draft_request_is_retained(monkeypatch, tmp_path):
 
 
 
-def test_conversation_returns_one_question_and_never_downgrades_triage(monkeypatch, tmp_path):
+def test_conversation_preserves_grouped_questions_and_never_downgrades_triage(monkeypatch, tmp_path):
     monkeypatch.setattr(service, "DATABASE_PATH", tmp_path / "missing.sqlite3")
     monkeypatch.setattr(service, "search_sources", lambda *a, **k: [])
     monkeypatch.setattr(service, "generate_conversation_json", lambda payload: {
@@ -154,3 +154,20 @@ def test_conversation_keeps_explicitly_requested_factual_draft(monkeypatch, tmp_
         "Please draft a factual letter asking my landlord to return my security deposit."
     )
     assert result["draft"].startswith("Please return the security deposit")
+
+
+def test_conversation_accepts_user_confirmation_of_recent_draft_offer(monkeypatch, tmp_path):
+    monkeypatch.setattr(service, "DATABASE_PATH", tmp_path / "missing.sqlite3")
+    monkeypatch.setattr(service, "search_sources", lambda *a, **k: [])
+    monkeypatch.setattr(service, "generate_conversation_json", lambda payload: {
+        "reply": "Here is a factual starting draft based on the information you supplied.",
+        "next_question": "",
+        "case_summary": "The user reports a landlord deposit dispute.",
+        "risk_level": "routine",
+        "draft": "Dear [Landlord], I request return of the security deposit discussed.",
+    })
+    history = [
+        {"role": "assistant", "content": "If you want, I can draft a factual letter to your landlord."},
+    ]
+    result = service.respond_to_turn("Yes, please draft it.", history)
+    assert result["draft"].startswith("Dear [Landlord]")
