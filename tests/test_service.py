@@ -168,6 +168,7 @@ def test_conversation_accepts_user_confirmation_of_recent_draft_offer(monkeypatc
     })
     history = [
         {"role": "assistant", "content": "If you want, I can draft a factual letter to your landlord."},
+        {"role": "user", "content": "Yes, please draft it."},
     ]
     result = service.respond_to_turn("Yes, please draft it.", history)
     assert result["draft"].startswith("Dear [Landlord]")
