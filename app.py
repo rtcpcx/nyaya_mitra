@@ -28,11 +28,15 @@ def ensure_hosted_database():
     if DATABASE_PATH.is_file():
         return
 
-    repo_id = str(st.secrets.get("HF_DATABASE_REPO_ID", "")).strip()
-    if not repo_id:
+    try:
+        repo_id = str(st.secrets.get("HF_DATABASE_REPO_ID", "")).strip()
+        token = str(st.secrets.get("HF_TOKEN", "")).strip() or None
+    except Exception:
+        # Streamlit Secrets may not be configured in local or first-time deployments.
         return
 
-    token = str(st.secrets.get("HF_TOKEN", "")).strip() or None
+    if not repo_id:
+        return
     DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     from huggingface_hub import hf_hub_download
