@@ -134,13 +134,13 @@ def respond_to_turn(
     for item in reversed(history or []):
         metadata = item.get("metadata") if isinstance(item, dict) else None
         if item.get("role") == "assistant" and isinstance(metadata, dict) and metadata.get("case_summary"):
-            prior_summary = str(metadata["case_summary"])[:500]
+            prior_summary = str(metadata["case_summary"])[:1200]
             break
     turns = [
-        {"role": item.get("role"), "content": str(item.get("content") or "")[:800]}
+        {"role": item.get("role"), "content": str(item.get("content") or "")[:1200]}
         for item in (history or [])
         if item.get("role") in {"user", "assistant"} and item.get("content")
-    ][-6:]
+    ][-12:]
     if turns and turns[-1]["role"] == "user" and turns[-1]["content"].strip() == user_message.strip():
         turns = turns[:-1]
     user_context = " ".join(
@@ -184,9 +184,9 @@ def respond_to_turn(
         ],
         "first_pass_safety_triage": triage,
         "output_contract": {
-            "reply": "1-3 short natural sentences; no question mark",
-            "next_question": "zero or one specific question",
-            "case_summary": "only facts stated by the user; label unverified claims",
+            "reply": "empathetic and fact-specific; 2-5 sentences during intake and several useful paragraphs for a sufficiently supported assessment; no questions",
+            "next_question": "up to 4 relevant, organised questions not already answered; empty when intake is complete",
+            "case_summary": "cumulative facts stated by the user; include material dates, amounts, parties, evidence, goals and unknowns; label claims",
             "risk_level": "routine, prompt, or urgent",
         },
     }
@@ -197,13 +197,13 @@ def respond_to_turn(
     parsed = ConversationResponse.model_validate(model_output).model_dump()
     draft = parsed.get("draft", "") if _draft_was_explicitly_requested(user_message) else ""
 
-    question = _first_question(parsed.get("next_question", ""))
-    if not question:
-        question = _first_question(parsed.get("reply", ""))
+    # Preserve a small grouped set of intake questions; reducing this to the
+    # first question discarded useful context-gathering prompts.
+    question = (parsed.get("next_question", "") or "").strip()[:1200]
     reply = _remove_questions(parsed.get("reply", "")).strip()
     if not reply:
         reply = "I can help you work through this carefully."
-    if not sources:
+    if not sources and not question:
         caveat = "I couldn't verify a sufficiently relevant legal provision in the local index, so I won't guess at the specific law."
         if caveat.casefold() not in reply.casefold():
             reply = f"{reply} {caveat}"
