@@ -13,6 +13,9 @@ A Windows-friendly prototype with a real OpenAI-compatible LLM integration (Groq
 - Groq default model updated to `openai/gpt-oss-120b`; the old `llama-3.3-70b-versatile` was deprecated for Developer/free tiers on 16 August 2026. Model IDs can change; check Groq's current model list.
 - App remains usable for database search without a Groq key. AI case analysis activates when you add your key.
 - Safer source handling, explicit jurisdiction, status and provenance in retrieved records, JSON validation, better error messages and tests.
+- Conversational case handling: short chat turns, one follow-up question at a time, session-level continuity, and a separate developer/test-bench view for raw JSON.
+- Relevance-gated case retrieval: conversational retrieval expands tenancy vocabulary and rejects generic RBI/TRAI-style deposit matches that lack tenancy context. Manual source-library search remains broad.
+- Per-turn latency diagnostics for retrieval, model generation and total processing time.
 
 ## 1. Requirements
 
@@ -128,14 +131,11 @@ Save `.env`. Do not commit it or share the key. The previous model `llama-3.3-70
 
 Or run `streamlit run app.py` directly inside the activated virtual environment.
 
-The app opens in your browser. It has:
-- Nationwide legal source search (works without Groq key)
-- Case-story intake and triage
-- LLM analysis once the API key is configured
-- Retrieved-source display with source URLs, jurisdiction, status and provenance
-- Downloadable raw JSON output
+The app opens in your browser as a chat. Describe the situation in your own words and answer the assistant's follow-up questions in the same conversation. Set the city/state and response language in the sidebar. The assistant keeps the current conversation in Streamlit session state; it is not a permanent case-management database.
 
-If you skipped database setup, use **Download and index nationwide legal database** in the sidebar.
+The chat shows concise replies and relevant sources. Detailed model output, triage, timing metrics and JSON downloads are kept in the **Developer / test bench** expander. Each turn is also written to the local `raw_outputs/` folder. Start a new conversation from the sidebar when you want to clear the current session.
+
+If you skipped database setup, use **Download / update legal database** in the sidebar.
 
 ## 7. Optional: add judgments (large download)
 
@@ -177,7 +177,7 @@ This sends a minimal test request and incurs any applicable provider usage. No l
 - The Constitution JSONL is a third-party structured transcription. It is kept separate and must be checked against the Legislative Department's official Constitution publication for consequential questions.
 - `in_force` and `act_status` are dataset metadata, not a legal opinion or guarantee of commencement/current applicability. State-specific amendments, rules, notifications and commencement dates may matter.
 - The default download excludes judgments. No claim-law answer should be treated as a verified precedent search until judgment data is added and reviewed.
-- Search is SQLite FTS5 lexical retrieval, not a legal expert system. It may miss relevant passages and may rank a superficially similar section.
+- Search is SQLite FTS5 lexical retrieval, not a legal expert system. Conversational case retrieval applies conservative topic checks (currently with an explicit tenancy-domain gate) to reduce generic keyword false positives; this can also exclude relevant passages whose wording differs from the query. Manual source-library search remains broad.
 - No OCR, document authentication, case-status integration, deadline computation, user accounts, encryption-at-rest, retention controls or production deployment hardening. Hindi/Assamese and other language output has not yet been quality-validated.
 - The first-pass risk triage uses transparent keywords and can miss urgent facts. If in doubt, consult a lawyer.
 - Never cite a statute, section, case, deadline or procedure unless the retrieved material supports it. Even then, show the source and ask the user to verify current official text.
