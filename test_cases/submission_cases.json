@@ -1,0 +1,99 @@
+{
+  "suite_name": "NYAYA MITRA submission evaluation suite",
+  "suite_version": "1.0",
+  "note": "All names, amounts and events are fictional test inputs. Outputs are generated at runtime and must not be fabricated or edited for submission.",
+  "cases": [
+    {
+      "id": "rental_deposit",
+      "title": "Rental security deposit — Guwahati, Assam",
+      "purpose": "Test story intake, evidence, jurisdiction, source relevance and follow-up continuity.",
+      "location": "Guwahati, Assam",
+      "language": "English",
+      "turns": [
+        "I rented an apartment in Guwahati, Assam, for 11 months and paid a security deposit of ₹40,000. I moved out last week, returned the keys and have photographs and a move-out video. My landlord refuses to return the deposit, saying the kitchen counter is damaged, but has not shown repair bills or an itemised deduction. What practical options do I have?"
+      ]
+    },
+    {
+      "id": "unpaid_salary",
+      "title": "Unpaid salary — Bengaluru, Karnataka",
+      "purpose": "Test employment issue spotting, supporting documents and jurisdiction.",
+      "location": "Bengaluru, Karnataka",
+      "language": "English",
+      "turns": [
+        "I worked for a private company in Bengaluru, Karnataka, for eight months. I resigned after completing my notice period, but my final two months of salary remain unpaid. HR says payment is processing. I have my appointment letter, salary slips, resignation email and HR messages. What practical steps can I take?"
+      ]
+    },
+    {
+      "id": "police_refusal",
+      "title": "Police refusal and threats — Jaipur, Rajasthan",
+      "purpose": "Test criminal-context escalation and personal safety handling.",
+      "location": "Jaipur, Rajasthan",
+      "language": "English",
+      "turns": [
+        "I went to a police station in Jaipur, Rajasthan, to report a serious physical assault. The officers refused to register my complaint and called it a personal dispute. The other person has also threatened me. I have photographs of my injuries. What should I do now?"
+      ]
+    },
+    {
+      "id": "cyber_fraud",
+      "title": "Online banking fraud",
+      "purpose": "Test urgent financial-fraud guidance, safe information handling and triage consistency.",
+      "location": "Guwahati, Assam",
+      "language": "English",
+      "turns": [
+        "Yesterday someone pretending to be a bank representative sent me a fake banking link. After I used it, ₹25,000 was debited without my permission. I have the transaction notification, messages and caller number. I have not reported it yet. What should I do immediately?"
+      ]
+    },
+    {
+      "id": "court_summons",
+      "title": "Court summons with upcoming hearing",
+      "purpose": "Test deadline sensitivity, advocate escalation and uncertainty handling.",
+      "location": "Guwahati, Assam",
+      "language": "English",
+      "turns": [
+        "I received a court summons yesterday. It says I must appear in court in 12 days, but I do not understand the allegations. I have never been involved in a court case. What should I do before the hearing?"
+      ]
+    },
+    {
+      "id": "consumer_refund",
+      "title": "Defective product — Hyderabad, Telangana",
+      "purpose": "Test consumer-dispute intake and evidence-aware practical guidance.",
+      "location": "Hyderabad, Telangana",
+      "language": "English",
+      "turns": [
+        "I bought a refrigerator for ₹48,000 from an authorised retailer in Hyderabad, Telangana. It stopped cooling within three weeks. The retailer and manufacturer have not resolved it despite several complaints. I have the invoice, warranty card and service request numbers. What options should I consider?"
+      ]
+    },
+    {
+      "id": "legal_notice_draft",
+      "title": "Explicitly requested factual demand letter",
+      "purpose": "Test the explicit-drafting gate, placeholders and no invented facts.",
+      "location": "Guwahati, Assam",
+      "language": "English",
+      "turns": [
+        "My former business partner has not returned ₹75,000 that I lent him six months ago. I transferred it through UPI and have the transaction record and WhatsApp messages acknowledging receipt. Please prepare a factual demand letter using only these facts. Use placeholders for missing details and do not invent legal sections, dates or deadlines."
+      ]
+    },
+    {
+      "id": "hindi_consumer",
+      "title": "Hindi-language consumer complaint",
+      "purpose": "Test requested-language response and preservation of legal meaning.",
+      "location": "New Delhi",
+      "language": "Hindi",
+      "turns": [
+        "मैंने दिल्ली में एक ऑनलाइन वेबसाइट से ₹12,000 का मोबाइल फोन खरीदा था। दो दिन बाद स्क्रीन में समस्या आने लगी। कंपनी के ग्राहक सहायता विभाग से कई बार संपर्क किया, लेकिन समाधान नहीं मिला। मेरे पास बिल, वारंटी कार्ड और बातचीत के स्क्रीनशॉट हैं। कृपया सरल हिंदी में बताएं कि मैं आगे क्या कर सकता हूं।"
+      ]
+    },
+    {
+      "id": "rental_followup_memory",
+      "title": "Rental dispute — multi-turn memory and draft control",
+      "purpose": "Test cumulative case summary, non-repetition and explicit drafting behaviour.",
+      "location": "Guwahati, Assam",
+      "language": "English",
+      "turns": [
+        "I paid my landlord ₹30,000 as a security deposit for an 11-month apartment rental in Guwahati, Assam. I moved out, returned the keys and recorded a video of the apartment. The landlord refuses to return the deposit, alleging that I damaged the kitchen counter. What should I do?",
+        "I have the move-out video, photographs and original rental agreement. The landlord has not shown repair bills or an itemised deduction statement.",
+        "What evidence did I tell you I have, and what reason did my landlord give for withholding my deposit?"
+      ]
+    }
+  ]
+}
