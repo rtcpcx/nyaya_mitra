@@ -133,7 +133,7 @@ Or run `streamlit run app.py` directly inside the activated virtual environment.
 
 The app opens in your browser as a chat. Describe the situation in your own words and answer the assistant's follow-up questions in the same conversation. Set the city/state and response language in the sidebar. The assistant keeps a bounded recent conversation context and a short case recap in Streamlit session state; it is not a permanent case-management database. Correct the recap in chat if it misses or misstates a fact.
 
-The chat shows concise replies and relevant sources. Detailed model output, triage, timing metrics and JSON downloads are kept in the **Developer / test bench** expander. Each turn is also written to the local `raw_outputs/` folder. Start a new conversation from the sidebar when you want to clear the current session.
+The chat uses a bounded request budget (45 seconds by default, with no hidden automatic retry) and a 650-token response cap. You can tune it with `LLM_CHAT_TIMEOUT_SECONDS` and `LLM_CHAT_MAX_RETRIES` in your local `.env`. Run `python -m src.llm --test-chat` to test the same compact model call used by chat and print its elapsed time. The chat shows concise replies and relevant sources. Detailed model output, triage, timing metrics and JSON downloads are kept in the **Developer / test bench** expander. Each turn is also written to the local `raw_outputs/` folder. Start a new conversation from the sidebar when you want to clear the current session.
 
 If you skipped database setup, use **Download / update legal database** in the sidebar.
 
@@ -167,6 +167,7 @@ To test the configured LLM provider after setting the key:
 
 ```powershell
 python -m src.llm --test
+python -m src.llm --test-chat
 ```
 
 This sends a minimal test request and incurs any applicable provider usage. No live Groq request is made when the key is missing.
