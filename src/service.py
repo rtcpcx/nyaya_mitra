@@ -185,7 +185,7 @@ def respond_to_turn(
     case_text = (retrieval_query or user_message).strip()
     triage = triage_text(case_text)
     # A location stated in the conversation counts even if the sidebar field is blank.
-    state_hint = _state_hint(state_city) or _state_hint(user_context)
+    state_hint = _state_hint(state_city) or _state_hint(user_context) or _state_hint(prior_summary)
     resolved_location = state_city.strip() or (state_hint.title() if state_hint else "Not confirmed; do not assume a state.")
 
     retrieval_started = perf_counter()
