@@ -36,3 +36,4 @@ class ConversationResponse(BaseModel):
     next_question: str = Field(default="", max_length=400)
     case_summary: str = Field(default="", max_length=1200)
     risk_level: Literal["routine", "prompt", "urgent"] = "routine"
+    draft: str = Field(default="", max_length=6000)
