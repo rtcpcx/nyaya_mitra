@@ -69,3 +69,10 @@ def test_conversation_prompt_answers_concerns_and_prevents_repeat_intake():
     assert "Never give absolute guarantees" in llm.CHAT_SYSTEM_PROMPT
     assert "Never say an agreement has been breached" in llm.CHAT_SYSTEM_PROMPT
     assert "previous_case_summary" in llm.CHAT_SYSTEM_PROMPT
+
+
+
+def test_chat_prompt_requires_safe_legal_notice_language_and_quick_actions():
+    assert "Never say it cannot affect reputation" in llm.CHAT_SYSTEM_PROMPT
+    assert "move-in/move-out videos as potentially useful corroborating evidence" in llm.CHAT_SYSTEM_PROMPT
+    assert "suggested_actions" in llm.CHAT_SYSTEM_PROMPT

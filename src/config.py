@@ -5,15 +5,31 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env")
 
+
+def _setting(name: str, default: str = "") -> str:
+    """Read local environment/.env first, then Streamlit Cloud secrets."""
+    value = os.getenv(name)
+    if value is not None:
+        return value
+    try:
+        import streamlit as st
+        secret_value = st.secrets.get(name, default)
+        return str(secret_value)
+    except Exception:
+        # Streamlit secrets are unavailable in local CLI/test contexts unless
+        # a secrets.toml is configured; environment/.env remains supported.
+        return default
+
+
 def _path_env(name: str, default: str) -> Path:
     value = Path(os.getenv(name, default))
     return value if value.is_absolute() else (ROOT / value).resolve()
 
-LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1")
-LLM_API_KEY = os.getenv("LLM_API_KEY", "").strip()
-LLM_MODEL = os.getenv("LLM_MODEL", "openai/gpt-oss-120b").strip()
-LLM_CHAT_TIMEOUT_SECONDS = max(10, min(180, int(os.getenv("LLM_CHAT_TIMEOUT_SECONDS", "45"))))
-LLM_CHAT_MAX_RETRIES = max(0, min(2, int(os.getenv("LLM_CHAT_MAX_RETRIES", "0"))))
+LLM_BASE_URL = _setting("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+LLM_API_KEY = _setting("LLM_API_KEY", "").strip()
+LLM_MODEL = _setting("LLM_MODEL", "openai/gpt-oss-120b").strip()
+LLM_CHAT_TIMEOUT_SECONDS = max(10, min(180, int(_setting("LLM_CHAT_TIMEOUT_SECONDS", "45"))))
+LLM_CHAT_MAX_RETRIES = max(0, min(2, int(_setting("LLM_CHAT_MAX_RETRIES", "0"))))
 OPEN_INDIA_LAW_DIR = _path_env("OPEN_INDIA_LAW_DIR", "./data/open_india_law")
 CONSTITUTION_DIR = _path_env("CONSTITUTION_DIR", "./data/constitution")
 DATABASE_PATH = _path_env("DATABASE_PATH", "./data/nyaya_mitra.sqlite3")

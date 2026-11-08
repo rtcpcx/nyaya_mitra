@@ -218,3 +218,34 @@ def test_conversation_remembers_older_user_facts_and_uses_chat_location(monkeypa
     assert "Guwahati, Assam" in captured["payload"]["user_statements_so_far"][0]
     assert captured["payload"]["location"] == "Assam"
     assert result["next_question"] == ""
+
+
+
+def test_conversation_returns_structured_suggested_actions(monkeypatch, tmp_path):
+    monkeypatch.setattr(service, "DATABASE_PATH", tmp_path / "missing.sqlite3")
+    monkeypatch.setattr(service, "search_sources", lambda *a, **k: [])
+    monkeypatch.setattr(service, "generate_conversation_json", lambda payload: {
+        "reply": "I can help you prepare a factual letter.",
+        "next_question": "",
+        "case_summary": "The user reports a rental deposit dispute.",
+        "risk_level": "routine",
+        "suggested_actions": [{
+            "label": "Draft a demand letter",
+            "prompt": "Please draft a factual demand letter asking my landlord to return my ₹25,000 security deposit."
+        }]
+    })
+    result = service.respond_to_turn("My landlord has not returned my deposit.")
+    assert result["suggested_actions"][0]["label"] == "Draft a demand letter"
+    assert "Please draft" in result["suggested_actions"][0]["prompt"]
+
+
+def test_triage_does_not_escalate_a_notice_mentioned_as_an_option():
+    from src.triage import triage_text
+
+    sent_or_considered = triage_text("I am thinking about sending a legal notice to my landlord.")
+    received_with_deadline = triage_text("I received a legal notice with a deadline to reply.")
+
+    assert sent_or_considered["level"] == "routine"
+    assert sent_or_considered["lawyer_recommended"] is False
+    assert received_with_deadline["level"] == "prompt"
+    assert received_with_deadline["lawyer_recommended"] is True

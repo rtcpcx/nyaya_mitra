@@ -31,9 +31,15 @@ class AnalysisResponse(BaseModel):
     draft: str = ""
 
 
+class SuggestedAction(BaseModel):
+    label: str = Field(min_length=1, max_length=48)
+    prompt: str = Field(min_length=1, max_length=1000)
+
+
 class ConversationResponse(BaseModel):
     reply: str = Field(min_length=1, max_length=5000)
     next_question: str = Field(default="", max_length=1200)
     case_summary: str = Field(default="", max_length=2200)
     risk_level: Literal["routine", "prompt", "urgent"] = "routine"
     draft: str = Field(default="", max_length=6000)
+    suggested_actions: list[SuggestedAction] = Field(default_factory=list, max_length=3)

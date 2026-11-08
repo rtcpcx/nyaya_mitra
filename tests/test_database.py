@@ -77,3 +77,20 @@ def test_no_files_raises_clear_error(tmp_path: Path):
         assert "No dataset files found" in str(exc)
     else:
         raise AssertionError("Expected missing-dataset error")
+
+
+
+def test_rental_search_rejects_generic_deposit_match_without_shared_tenancy_term(tmp_path, monkeypatch):
+    legal = tmp_path / "legal"; legal.mkdir()
+    constitution = tmp_path / "constitution"; constitution.mkdir()
+    (legal / "in_central_regulations.parquet").write_bytes(b"fixture")
+    rows = [
+        {"act_id":"T1","chunk_id":"T1","title":"Telecom Security Deposit Regulation","section_number":"10","text":"Security deposit for subscriber premises and equipment charges","jurisdiction":"central","act_status":"in_force","year":2020},
+        {"act_id":"R1","chunk_id":"R1","title":"Assam Rental Deposit Provision","section_number":"4","text":"Landlord shall return tenant security deposit after lease termination","jurisdiction":"Assam","act_status":"in_force","year":2020},
+    ]
+    monkeypatch.setattr("src.database._parquet_records", lambda path: iter(rows))
+    db = tmp_path / "db.sqlite3"
+    build_index(legal, constitution, db)
+    results = search_sources("My landlord has not returned my security deposit", db, 10, "assam", strict_relevance=True)
+    assert any("Assam Rental" in item["title"] for item in results)
+    assert not any("Telecom" in item["title"] for item in results)
