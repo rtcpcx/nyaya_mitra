@@ -1,5 +1,5 @@
-import json, re
-from src.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+import json, re, time
+from src.config import (LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, LLM_CHAT_TIMEOUT_SECONDS, LLM_CHAT_MAX_RETRIES)
 
 SYSTEM_PROMPT = """You are Nyaya Mitra, a careful general-purpose Indian legal information assistant for ordinary people. You are not a lawyer and must not claim to give legal advice, decide legal rights, adjudicate truth, or promise outcomes.
 
@@ -61,23 +61,51 @@ LEGAL SAFETY:
 
 
 def generate_conversation_json(payload: dict) -> dict:
-    """Generate a short chat turn with a shorter timeout/retry budget than report mode."""
+    """Generate one bounded chat turn with observable, configurable timeout behaviour."""
     if not LLM_API_KEY:
         raise RuntimeError("LLM_API_KEY is not configured. Add your provider key to the project's .env file.")
     try:
-        from openai import OpenAI
+        from openai import OpenAI, APITimeoutError, APIConnectionError, APIStatusError
     except ImportError as exc:
         raise RuntimeError("OpenAI Python SDK is missing. Run `pip install -r requirements.txt`.") from exc
-    client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL, timeout=60, max_retries=1)
-    response = client.chat.completions.create(
-        model=LLM_MODEL,
-        temperature=0.1,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": CHAT_SYSTEM_PROMPT},
-            {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
-        ],
+
+    started = time.perf_counter()
+    client = OpenAI(
+        api_key=LLM_API_KEY,
+        base_url=LLM_BASE_URL,
+        timeout=LLM_CHAT_TIMEOUT_SECONDS,
+        max_retries=LLM_CHAT_MAX_RETRIES,
     )
+    try:
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            temperature=0.1,
+            max_tokens=650,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": CHAT_SYSTEM_PROMPT},
+                {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+            ],
+        )
+    except APITimeoutError as exc:
+        elapsed = round(time.perf_counter() - started, 1)
+        raise RuntimeError(
+            f"The {LLM_MODEL} request timed out after about {elapsed}s "
+            f"(chat timeout is {LLM_CHAT_TIMEOUT_SECONDS}s; retries={LLM_CHAT_MAX_RETRIES}). "
+            "Check provider availability and network connectivity, then retry."
+        ) from exc
+    except APIConnectionError as exc:
+        raise RuntimeError(
+            f"Could not connect to the configured AI provider for model {LLM_MODEL}. "
+            "Check the endpoint URL, internet connection and firewall."
+        ) from exc
+    except APIStatusError as exc:
+        status = getattr(exc, "status_code", "unknown")
+        raise RuntimeError(
+            f"The AI provider returned HTTP {status} for model {LLM_MODEL}. "
+            "Check the provider response, model access and API quota."
+        ) from exc
+
     return _extract_json(response.choices[0].message.content or "")
 
 def generate_json(payload: dict) -> dict:
