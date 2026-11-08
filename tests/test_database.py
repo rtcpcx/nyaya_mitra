@@ -15,13 +15,13 @@ def test_build_and_search_nationwide_and_constitution(tmp_path: Path, monkeypatc
         {"act_id":"A4","chunk_id":"A4_wb","title":"West Bengal Tenancy Example Act","section_number":"8","text":"West Bengal landlord tenancy security deposit dispute","jurisdiction":"West Bengal","state":"West Bengal","act_status":"in_force","year":2020,"source_url":"https://example.org/wb"},
         {"act_id":"A5","chunk_id":"A5_reg","title":"West Bengal Tenancy Regulation Example","section_number":"9","text":"West Bengal landlord tenancy security deposit regulation","jurisdiction":"West Bengal","state":"West Bengal","act_status":"in_force","year":2020,"source_url":"https://example.org/wb-reg"},
         {"act_id":"A6","chunk_id":"A6_trai","title":"TRAI DTH Tariff Order","section_number":"4","text":"Cable television subscriber security deposit and tariff charges","jurisdiction":"central","state":"central","act_status":"in_force","year":2013,"source_url":"https://example.org/trai"},
-        {"act_id":"A7","chunk_id":"A7_rbi","title":"RBI Management of Advances Circular","section_number":"5","text":"Bank advances borrower loan security deposit and collateral requirements","jurisdiction":"central","state":"central","act_status":"in_force","year":2023,"source_url":"https://example.org/rbi"}
+        {"act_id":"A7","chunk_id":"A7_rbi","title":"RBI Management of Advances Circular","section_number":"5","text":"Bank advances borrower loan security deposit and collateral requirements","jurisdiction":"central","state":"central","act_status":"in_force","year":2023,"source_url":"https://example.org/rbi"},\n        {"act_id":"A8","chunk_id":"A8_delhi","title":"Delhi Rent Control Act","section_number":"14","text":"Delhi landlord tenant tenancy eviction premises","jurisdiction":"central","state":"central","act_status":"in_force","year":1958,"source_url":"https://example.org/delhi"},\n        {"act_id":"A9","chunk_id":"A9_punjab","title":"Punjab Tenancy Act","section_number":"62","text":"Punjab landlord tenant tenancy rent","jurisdiction":"central","state":"central","act_status":"in_force","year":1887,"source_url":"https://example.org/punjab"}
     ]
     monkeypatch.setattr("src.database._parquet_records", lambda path: iter(rows))
     (constitution / "articles.jsonl").write_text(json.dumps({"article_number":"21","article_title":"Protection of life and personal liberty","part_number":"III","text":"No person shall be deprived of life or personal liberty except according to procedure established by law."})+"\n", encoding="utf-8")
     db = tmp_path / "test.sqlite3"
     stats = build_index(legal, constitution, db)
-    assert stats["indexed_rows"] == 8
+    assert stats["indexed_rows"] == 10
     consumer = search_sources("consumer refund defective goods", db, 5)
     assert consumer and consumer[0]["title"] == "Consumer Protection Act"
     art = search_sources("Article 21 personal liberty", db, 5)
@@ -29,7 +29,7 @@ def test_build_and_search_nationwide_and_constitution(tmp_path: Path, monkeypatc
 
     assam = search_sources("landlord tenancy security deposit", db, 10, "assam")
     assert any(x["title"] == "Assam Tenancy Example Act" for x in assam)
-    assert not any("West Bengal" in x["title"] for x in assam)
+    assert not any("West Bengal" in x["title"] for x in assam)\n    assert not any("Delhi" in x["title"] or "Punjab" in x["title"] for x in assam)
 
     national = search_sources("landlord tenancy security deposit", db, 10, national_only=True)
     assert not any("Assam" in x["title"] or "West Bengal" in x["title"] for x in national)
