@@ -27,7 +27,24 @@ The app reads local `.env` values first and falls back to Streamlit Secrets. The
 
 ## Legal database setup
 
-After the app starts, use **Download / update legal database** in the sidebar. The first download/indexing can take time and may exceed a free hosting instance's resource limits. If it fails, build the database in a controlled environment and arrange a supported persistent database/data volume before production use. Do not assume the local SQLite index survives a Streamlit Community Cloud restart.
+The application can download the prebuilt SQLite FTS5 index from a private Hugging Face dataset repository at startup. This avoids rebuilding the index on Streamlit Community Cloud.
+
+1. Create a **private dataset repository** on Hugging Face and upload the prebuilt file as `nyaya_mitra.sqlite3` at the repository root.
+2. Create a read-only Hugging Face access token that can read that private repository.
+3. In Streamlit Community Cloud, open **App → Settings → Secrets** and add:
+
+```toml
+HF_DATABASE_REPO_ID = "YOUR_HF_USERNAME/nyaya-mitra-db"
+HF_TOKEN = "YOUR_READ_ONLY_HUGGING_FACE_TOKEN"
+```
+
+4. Restart/redeploy the app. On startup, `app.py` checks `DATABASE_PATH`; if the file is absent and the Hugging Face repository secret is configured, it downloads the database into the configured data directory. If the database is already present in the runtime, it is reused.
+
+The Hugging Face token must remain in Streamlit Secrets and must never be committed to Git. The SQLite file is intentionally excluded from Git by `.gitignore`.
+
+Streamlit Community Cloud's local filesystem is not guaranteed to persist across restarts. A cold start may therefore download the full database again and take several minutes. Confirm that the app's available disk space and resource limits can accommodate the database. The download only transfers the prebuilt index; it does not rebuild it.
+
+If the Hugging Face secrets are absent, the app continues to start without the database and displays its existing database-not-indexed status. Do not use the sidebar's **Download / update legal database** action on the hosted app unless you specifically intend to download all source datasets and rebuild the index there.
 
 ## Privacy and production cautions
 
