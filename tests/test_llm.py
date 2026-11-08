@@ -39,11 +39,9 @@ def test_chat_request_uses_bounded_settings_and_token_budget(monkeypatch):
     assert result["reply"] == "Connected"
     assert calls["client"]["timeout"] == 37
     assert calls["client"]["max_retries"] == 0
-    assert calls["request"]["max_tokens"] == 650
+    assert calls["request"]["max_tokens"] == 2048
     assert calls["request"]["response_format"] == {"type": "json_object"}
-    assert calls["request"]["extra_body"] == {
-        "google": {"thinking_config": {"thinking_level": "low"}}
-    }
+    assert calls["request"]["reasoning_effort"] == "low"
 
 
 def test_chat_timeout_has_actionable_provider_diagnostic(monkeypatch):
