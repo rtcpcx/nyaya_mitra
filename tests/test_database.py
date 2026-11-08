@@ -29,7 +29,7 @@ def test_build_and_search_nationwide_and_constitution(tmp_path: Path, monkeypatc
     art = search_sources("Article 21 personal liberty", db, 5)
     assert any(x["source_type"] == "constitution" for x in art)
 
-    assam = search_sources("landlord tenancy security deposit", db, 10, "assam")
+    assam = search_sources("landlord tenancy security deposit", db, 10, "assam", strict_relevance=True)
     assert any(x["title"] == "Assam Tenancy Example Act" for x in assam)
     assert not any("West Bengal" in x["title"] for x in assam)\n    assert not any("Delhi" in x["title"] or "Punjab" in x["title"] for x in assam)
 
