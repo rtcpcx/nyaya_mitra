@@ -172,3 +172,49 @@ def test_conversation_accepts_user_confirmation_of_recent_draft_offer(monkeypatc
     ]
     result = service.respond_to_turn("Yes, please draft it.", history)
     assert result["draft"].startswith("Dear [Landlord]")
+
+
+def test_conversation_remembers_older_user_facts_and_uses_chat_location(monkeypatch, tmp_path):
+    monkeypatch.setattr(service, "DATABASE_PATH", tmp_path / "missing.sqlite3")
+    captured = {}
+
+    def fake_search(query, *args, **kwargs):
+        captured["query"] = query
+        captured["state_hint"] = args[3]
+        captured["national_only"] = kwargs.get("national_only")
+        return []
+
+    def fake_generate(payload):
+        captured["payload"] = payload
+        return {
+            "reply": "I understand that you paid the deposit by cheque and have supporting records.",
+            "next_question": "",
+            "case_summary": "The user reports a Guwahati rental deposit dispute.",
+            "risk_level": "routine",
+        }
+
+    monkeypatch.setattr(service, "search_sources", fake_search)
+    monkeypatch.setattr(service, "generate_conversation_json", fake_generate)
+    history = [
+        {"role": "user", "content": "I live in Guwahati, Assam and rented a flat."},
+        {"role": "assistant", "content": "When did you move out?"},
+        {"role": "user", "content": "I paid the ₹25,000 deposit by cheque."},
+        {"role": "assistant", "content": "Do you have a written agreement?"},
+        {"role": "user", "content": "The landlord alleges damage, but I have move-in and move-out videos."},
+        {"role": "assistant", "content": "Have you contacted the landlord?"},
+        {"role": "user", "content": "I emailed him and have his postal address."},
+        {"role": "assistant", "content": "What does the agreement say?"},
+        {"role": "user", "content": "It says refund after vacating; I left three months ago."},
+        {"role": "assistant", "content": "Do you want to speak to a lawyer?"},
+        {"role": "user", "content": "I am worried about sending a legal notice."},
+        {"role": "assistant", "content": "I can explain the process."},
+    ]
+
+    result = service.respond_to_turn("Will it affect my reputation?", history)
+
+    assert captured["state_hint"] == "assam"
+    assert captured["national_only"] is False
+    assert "paid the ₹25,000 deposit by cheque" in captured["payload"]["user_statements_so_far"]
+    assert "Guwahati, Assam" in captured["payload"]["user_statements_so_far"][0]
+    assert captured["payload"]["location"] == "Assam"
+    assert result["next_question"] == ""
