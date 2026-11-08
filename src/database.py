@@ -35,6 +35,27 @@ def _query_domain(query: str) -> str | None:
     return None
 
 
+def _title_matches_state(title: str, jurisdiction_hint: str | None) -> bool:
+    """Reject acts named for a different state even when dataset metadata says 'central'."""
+    if not jurisdiction_hint:
+        return True
+    normalized_title = (title or "").casefold()
+    current = jurisdiction_hint.casefold().strip()
+    named_regions = set((
+        "andhra pradesh", "arunachal pradesh", "assam", "bihar", "chhattisgarh",
+        "goa", "gujarat", "haryana", "himachal pradesh", "jharkhand",
+        "karnataka", "kerala", "madhya pradesh", "maharashtra", "manipur",
+        "meghalaya", "mizoram", "nagaland", "odisha", "punjab", "rajasthan",
+        "sikkim", "tamil nadu", "telangana", "tripura", "uttar pradesh",
+        "uttarakhand", "west bengal", "delhi", "jammu and kashmir", "ladakh",
+        "puducherry", "chandigarh", "central provinces",
+    ))
+    for region in named_regions:
+        if region != current and re.search(r"(?<![a-z])" + re.escape(region) + r"(?![a-z])", normalized_title):
+            return False
+    return True
+
+
 def _is_relevant_result(query: str, row: dict, domain: str | None) -> bool:
     source_text = " ".join(
         str(row.get(key) or "") for key in ("title", "section", "text", "legal_subject")
@@ -249,7 +270,8 @@ def search_sources(
         if strict_relevance:
             results = [
                 item for item in results
-                if _is_relevant_result(query, item, domain)
+                if _title_matches_state(item.get("title", ""), jurisdiction_hint)
+                and _is_relevant_result(query, item, domain)
             ][:max(1, min(20, top_k))]
         return results
     finally: conn.close()
