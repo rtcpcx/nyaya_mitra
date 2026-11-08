@@ -130,11 +130,17 @@ def respond_to_turn(
         raise ValueError("Please enter a message.")
 
     started = perf_counter()
+    prior_summary = ""
+    for item in reversed(history or []):
+        metadata = item.get("metadata") if isinstance(item, dict) else None
+        if item.get("role") == "assistant" and isinstance(metadata, dict) and metadata.get("case_summary"):
+            prior_summary = str(metadata["case_summary"])[:800]
+            break
     turns = [
-        {"role": item.get("role"), "content": str(item.get("content") or "")[:1800]}
+        {"role": item.get("role"), "content": str(item.get("content") or "")[:1200]}
         for item in (history or [])
         if item.get("role") in {"user", "assistant"} and item.get("content")
-    ][-10:]
+    ][-8:]
     if turns and turns[-1]["role"] == "user" and turns[-1]["content"].strip() == user_message.strip():
         turns = turns[:-1]
     user_context = " ".join(
@@ -159,6 +165,7 @@ def respond_to_turn(
     payload = {
         "user_message": user_message,
         "recent_conversation": turns,
+        "previous_case_summary": prior_summary,
         "location": state_city.strip() or "Not confirmed; do not assume a state.",
         "response_language": language,
         "relevant_legal_passages": [
