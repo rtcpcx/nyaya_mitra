@@ -89,7 +89,7 @@ def analyze_problem(problem: str, state_city: str = "", language: str = "English
 
 
 def analyze_without_llm(problem: str, state_city: str = "") -> dict:
-    """A safe local-only fallback for intake/triage while no Groq key is configured."""
+    """A safe local-only fallback for intake/triage while no LLM key is configured."""
     if not problem or not problem.strip(): raise ValueError("Please describe what happened.")
     triage=triage_text(problem)
     state_hint = _state_hint(state_city)
